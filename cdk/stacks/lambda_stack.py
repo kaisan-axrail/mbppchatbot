@@ -60,13 +60,13 @@ class LambdaStack(Stack):
                             resources=[
                                 self.sessions_table.table_arn,
                                 self.conversations_table.table_arn,
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/chatbot-conversation-history",
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-conversation-history",
                                 self.analytics_table.table_arn,
                                 f"{self.sessions_table.table_arn}/index/*",
                                 f"{self.conversations_table.table_arn}/index/*",
                                 f"{self.analytics_table.table_arn}/index/*",
                                 # Add websocket-connections table access
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/websocket-connections"
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-websocket-connections"
                             ]
                         )
                     ]
@@ -161,7 +161,7 @@ class LambdaStack(Stack):
             environment={
                 "SESSIONS_TABLE": self.sessions_table.table_name,
                 "CONVERSATIONS_TABLE": self.conversations_table.table_name,
-                "CONVERSATION_HISTORY_TABLE": "chatbot-conversation-history",
+                "CONVERSATION_HISTORY_TABLE": "mbpp-conversation-history",
                 "ANALYTICS_TABLE": self.analytics_table.table_name,
                 "REPORTS_TABLE": "mbpp-reports",
                 "EVENTS_TABLE": "mbpp-events",

@@ -20,7 +20,7 @@ class DatabaseStack(Stack):
         # Sessions table with TTL for automatic cleanup
         self.sessions_table = dynamodb.Table(
             self, "SessionsTable",
-            table_name="chatbot-sessions",
+            table_name="mbpp-sessions",
             partition_key=dynamodb.Attribute(
                 name="sessionId",
                 type=dynamodb.AttributeType.STRING
@@ -36,7 +36,7 @@ class DatabaseStack(Stack):
         # Conversations table with GSI for timestamp queries
         self.conversations_table = dynamodb.Table(
             self, "ConversationsTable",
-            table_name="chatbot-conversations",
+            table_name="mbpp-conversations",
             partition_key=dynamodb.Attribute(
                 name="sessionId",
                 type=dynamodb.AttributeType.STRING
@@ -69,7 +69,7 @@ class DatabaseStack(Stack):
         # Analytics table with GSI for efficient querying
         self.analytics_table = dynamodb.Table(
             self, "AnalyticsTable",
-            table_name="chatbot-analytics",
+            table_name="mbpp-analytics",
             partition_key=dynamodb.Attribute(
                 name="date",
                 type=dynamodb.AttributeType.STRING
@@ -116,7 +116,7 @@ class DatabaseStack(Stack):
         # Events table for storing event data
         self.events_table = dynamodb.Table(
             self, "EventsTable",
-            table_name="chatbot-events",
+            table_name="mbpp-events-main",
             partition_key=dynamodb.Attribute(
                 name="eventId",
                 type=dynamodb.AttributeType.STRING
@@ -128,7 +128,7 @@ class DatabaseStack(Stack):
         # Conversation History table for storing all messages with sentiment
         self.conversation_history_table = dynamodb.Table(
             self, "ConversationHistoryTable",
-            table_name="chatbot-conversation-history",
+            table_name="mbpp-conversation-history",
             partition_key=dynamodb.Attribute(
                 name="sessionId",
                 type=dynamodb.AttributeType.STRING

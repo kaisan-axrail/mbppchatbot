@@ -26,7 +26,7 @@ app = cdk.App()
 # Uncomment to enable CI/CD pipeline
 PipelineStack(app, "PipelineStack",
     codestar_connection_arn="arn:aws:codestar-connections:ap-southeast-1:836581769622:connection/534fd2dc-e758-4dcd-959d-32af796a20c6",
-    github_repo="kaisansyazani/mcp-chatbot-mbpp-api",
+    github_repo="kaisan-axrail/mbppchatbot",
     github_branch="main"
 )
 
