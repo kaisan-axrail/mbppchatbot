@@ -31,6 +31,13 @@ class ApiStack(Stack):
         self.websocket_api = self.websocket_api_construct.websocket_api
         self.websocket_stage = self.websocket_api_construct.websocket_stage
         
+        # Output WebSocket API endpoint
+        CfnOutput(
+            self, "WebSocketApiEndpoint",
+            value=f"wss://{self.websocket_api.api_id}.execute-api.{self.region}.amazonaws.com/{self.websocket_stage.stage_name}",
+            description="WebSocket API endpoint URL"
+        )
+        
         # Create REST API for document operations if handler provided
         if self.document_upload_handler:
             self.rest_api = apigateway.RestApi(
