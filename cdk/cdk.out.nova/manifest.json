@@ -1,0 +1,1302 @@
+{
+  "version": "48.0.0",
+  "artifacts": {
+    "ChatbotDatabaseStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatbotDatabaseStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatbotDatabaseStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "ChatbotDatabaseStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/565903e44ed407440a6c8d36fd5db94b0c67173c25f60efdedc0610696203f84.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatbotDatabaseStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatbotDatabaseStack.assets"
+      ],
+      "metadata": {
+        "/ChatbotDatabaseStack/SessionsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "SessionsTable7C302024"
+            }
+          }
+        ],
+        "/ChatbotDatabaseStack/SessionsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionsTable7C302024"
+          }
+        ],
+        "/ChatbotDatabaseStack/ConversationsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "ConversationsTableCD91EB96"
+            }
+          }
+        ],
+        "/ChatbotDatabaseStack/ConversationsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConversationsTableCD91EB96"
+          }
+        ],
+        "/ChatbotDatabaseStack/AnalyticsTable": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "AnalyticsTable3F84C304"
+            }
+          }
+        ],
+        "/ChatbotDatabaseStack/AnalyticsTable/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AnalyticsTable3F84C304"
+          }
+        ],
+        "/ChatbotDatabaseStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatbotDatabaseStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"SessionsTable7C302024\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"ConversationsTableCD91EB96\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttConversationsTableCD91EB96Arn4A2B28C6"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Fn::GetAtt\":[\"AnalyticsTable3F84C304\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttAnalyticsTable3F84C304ArnFD90B42F"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Ref\":\"SessionsTable7C302024\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Ref\":\"ConversationsTableCD91EB96\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefConversationsTableCD91EB96EE2E4585"
+          }
+        ],
+        "/ChatbotDatabaseStack/Exports/Output{\"Ref\":\"AnalyticsTable3F84C304\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefAnalyticsTable3F84C30437863EDE"
+          }
+        ],
+        "/ChatbotDatabaseStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatbotDatabaseStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatbotDatabaseStack"
+    },
+    "ChatbotStorageStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatbotStorageStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatbotStorageStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "ChatbotStorageStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/4f30f65f582eecb403d2fb8069264f42d1a2bec1f61d0f68d74e72f95392c36c.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatbotStorageStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatbotStorageStack.assets"
+      ],
+      "metadata": {
+        "/ChatbotStorageStack/DocumentsBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucket9EC9DEB9"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketPolicy1F991BD4"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucket/AutoDeleteObjectsCustomResource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketAutoDeleteObjectsCustomResourceFE3123FC"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucket/Notifications/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketNotifications871115F2"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucket/AllowBucketNotificationsToChatbotStorageStackDocumentProcessorC79EA543": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketAllowBucketNotificationsToChatbotStorageStackDocumentProcessorC79EA5430C65D0F1"
+          }
+        ],
+        "/ChatbotStorageStack/Custom::S3AutoDeleteObjectsCustomResourceProvider": [
+          {
+            "type": "aws:cdk:is-custom-resource-handler-customResourceProvider",
+            "data": true
+          }
+        ],
+        "/ChatbotStorageStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+          }
+        ],
+        "/ChatbotStorageStack/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F"
+          }
+        ],
+        "/ChatbotStorageStack/ProcessedDocumentsBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProcessedDocumentsBucket0748053A"
+          }
+        ],
+        "/ChatbotStorageStack/ProcessedDocumentsBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProcessedDocumentsBucketPolicy8E3F76F6"
+          }
+        ],
+        "/ChatbotStorageStack/ProcessedDocumentsBucket/AutoDeleteObjectsCustomResource/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProcessedDocumentsBucketAutoDeleteObjectsCustomResourceBF64F865"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentProcessorRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentProcessorRole12EFF6D7"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentProcessor/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentProcessor3D49A083"
+          }
+        ],
+        "/ChatbotStorageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC"
+          }
+        ],
+        "/ChatbotStorageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Role/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36"
+          }
+        ],
+        "/ChatbotStorageStack/BucketNotificationsHandler050a0587b7544547bf325f094a3db834/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentUploadRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentUploadRole76486D80"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentUploadHandler/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentUploadHandlerA7645B2A"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentProcessingRule/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentProcessingRule8CD93328"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketName"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentsBucketArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketArn"
+          }
+        ],
+        "/ChatbotStorageStack/ProcessedDocumentsBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProcessedDocumentsBucketName"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentProcessorArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentProcessorArn"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentUploadHandlerArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentUploadHandlerArn"
+          }
+        ],
+        "/ChatbotStorageStack/DocumentUploadUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentUploadUrl"
+          }
+        ],
+        "/ChatbotStorageStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatbotStorageStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/ChatbotStorageStack/Exports/Output{\"Fn::GetAtt\":[\"ProcessedDocumentsBucket0748053A\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttProcessedDocumentsBucket0748053AArnC4CD5E76"
+          }
+        ],
+        "/ChatbotStorageStack/Exports/Output{\"Ref\":\"ProcessedDocumentsBucket0748053A\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefProcessedDocumentsBucket0748053A42BFD98D"
+          }
+        ],
+        "/ChatbotStorageStack/Exports/Output{\"Ref\":\"DocumentsBucket9EC9DEB9\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefDocumentsBucket9EC9DEB9131399C0"
+          }
+        ],
+        "/ChatbotStorageStack/Exports/Output{\"Fn::GetAtt\":[\"DocumentProcessor3D49A083\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttDocumentProcessor3D49A083ArnB97F8912"
+          }
+        ],
+        "/ChatbotStorageStack/Exports/Output{\"Fn::GetAtt\":[\"DocumentUploadHandlerA7645B2A\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttDocumentUploadHandlerA7645B2AArnF0832A60"
+          }
+        ],
+        "/ChatbotStorageStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatbotStorageStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatbotStorageStack"
+    },
+    "ChatbotLambdaStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatbotLambdaStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatbotLambdaStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "ChatbotLambdaStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/d1e909b550214e3c58c7e63e32a10715b51641d3073b8a88cbf38144a3eedd61.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatbotLambdaStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatbotDatabaseStack",
+        "ChatbotStorageStack",
+        "ChatbotLambdaStack.assets"
+      ],
+      "metadata": {
+        "/ChatbotLambdaStack/ApiSecrets/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiSecretsED109BDA"
+          }
+        ],
+        "/ChatbotLambdaStack/WebSocketHandlerRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketHandlerRole54BB05CE"
+          }
+        ],
+        "/ChatbotLambdaStack/WebSocketHandler/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketHandler47C0AA1A"
+          }
+        ],
+        "/ChatbotLambdaStack/SessionCleanupRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionCleanupRoleC8FA8A84"
+          }
+        ],
+        "/ChatbotLambdaStack/SessionCleanup/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionCleanupAC8C796B"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpServerSecrets/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpServerSecretsD3E08119"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpServerRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpServerRole0B174941"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpServer/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpServer97485EDE"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpServerArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpServerArn9EC35559"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpServerName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpServerName4E451674"
+          }
+        ],
+        "/ChatbotLambdaStack/McpServerConstruct/McpSecretsArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerConstructMcpSecretsArn61B8EC30"
+          }
+        ],
+        "/ChatbotLambdaStack/SessionCleanupSchedule/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionCleanupSchedule59730D2C"
+          }
+        ],
+        "/ChatbotLambdaStack/SessionCleanupSchedule/AllowEventRuleChatbotLambdaStackSessionCleanupE7F5E176": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionCleanupScheduleAllowEventRuleChatbotLambdaStackSessionCleanupE7F5E1765D1DF1AD"
+          }
+        ],
+        "/ChatbotLambdaStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatbotLambdaStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/ChatbotLambdaStack/Exports/Output{\"Fn::GetAtt\":[\"WebSocketHandler47C0AA1A\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+          }
+        ],
+        "/ChatbotLambdaStack/Exports/Output{\"Fn::GetAtt\":[\"McpServerConstructMcpServer97485EDE\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttMcpServerConstructMcpServer97485EDEArnE53FDEF6"
+          }
+        ],
+        "/ChatbotLambdaStack/Exports/Output{\"Fn::GetAtt\":[\"SessionCleanupAC8C796B\",\"Arn\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttSessionCleanupAC8C796BArnF08EF869"
+          }
+        ],
+        "/ChatbotLambdaStack/Exports/Output{\"Ref\":\"ApiSecretsED109BDA\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefApiSecretsED109BDA59A7E068"
+          }
+        ],
+        "/ChatbotLambdaStack/Exports/Output{\"Ref\":\"McpServerConstructMcpServerSecretsD3E08119\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefMcpServerConstructMcpServerSecretsD3E081191D5ED69F"
+          }
+        ],
+        "/ChatbotLambdaStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatbotLambdaStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatbotLambdaStack"
+    },
+    "ChatbotApiStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatbotApiStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatbotApiStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "ChatbotApiStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/c1a366019d8afd05cb57d1aa816e99702fb1b434550d81546e07af1c6e3eb09d.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatbotApiStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatbotLambdaStack",
+        "ChatbotApiStack.assets"
+      ],
+      "metadata": {
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/ConnectIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApiconnectRouteConnectIntegrationPermission4D3BF097"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/ConnectIntegration/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApiconnectRouteConnectIntegrationF5C8BD8C"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApiconnectRoute459173D2"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/DisconnectIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidisconnectRouteDisconnectIntegrationPermission5BCF4822"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/DisconnectIntegration/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidisconnectRouteDisconnectIntegration787A7ED4"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidisconnectRouteE9B71319"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/DefaultIntegration-Permission": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidefaultRouteDefaultIntegrationPermissionFBB2E962"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/DefaultIntegration/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidefaultRouteDefaultIntegrationD5E8FF0D"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketApidefaultRoute9C772C58"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketStage/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructChatbotWebSocketStage39C4D9A4"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/WebSocketApiEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructWebSocketApiEndpoint5F9D3FC2"
+          }
+        ],
+        "/ChatbotApiStack/WebSocketApiConstruct/WebSocketApiId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiConstructWebSocketApiId0BA3ADD6"
+          }
+        ],
+        "/ChatbotApiStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatbotApiStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/ChatbotApiStack/Exports/Output{\"Fn::GetAtt\":[\"WebSocketApiConstructChatbotWebSocketApi78B4F282\",\"ApiEndpoint\"]}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputFnGetAttWebSocketApiConstructChatbotWebSocketApi78B4F282ApiEndpointAB801ADF"
+          }
+        ],
+        "/ChatbotApiStack/Exports/Output{\"Ref\":\"WebSocketApiConstructChatbotWebSocketApi78B4F282\"}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ExportsOutputRefWebSocketApiConstructChatbotWebSocketApi78B4F28236B3596B"
+          }
+        ],
+        "/ChatbotApiStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatbotApiStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatbotApiStack"
+    },
+    "ChatbotMainStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "ChatbotMainStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "ChatbotMainStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://unknown-account/unknown-region",
+      "properties": {
+        "templateFile": "ChatbotMainStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/a6235d14261012414a2f48e7a74ea64300c24355168930f135911b8cd17f4625.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "ChatbotMainStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "ChatbotApiStack",
+        "ChatbotDatabaseStack",
+        "ChatbotLambdaStack",
+        "ChatbotStorageStack",
+        "ChatbotMainStack.assets"
+      ],
+      "metadata": {
+        "/ChatbotMainStack/WebSocketApiEndpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiEndpoint"
+          }
+        ],
+        "/ChatbotMainStack/WebSocketApiId": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketApiId"
+          }
+        ],
+        "/ChatbotMainStack/SessionsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionsTableName"
+          }
+        ],
+        "/ChatbotMainStack/ConversationsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ConversationsTableName"
+          }
+        ],
+        "/ChatbotMainStack/AnalyticsTableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "AnalyticsTableName"
+          }
+        ],
+        "/ChatbotMainStack/WebSocketHandlerArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WebSocketHandlerArn"
+          }
+        ],
+        "/ChatbotMainStack/McpServerArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpServerArn"
+          }
+        ],
+        "/ChatbotMainStack/SessionCleanupArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "SessionCleanupArn"
+          }
+        ],
+        "/ChatbotMainStack/ApiSecretsArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiSecretsArn"
+          }
+        ],
+        "/ChatbotMainStack/McpSecretsArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "McpSecretsArn"
+          }
+        ],
+        "/ChatbotMainStack/DocumentsBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentsBucketName"
+          }
+        ],
+        "/ChatbotMainStack/ProcessedDocumentsBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ProcessedDocumentsBucketName"
+          }
+        ],
+        "/ChatbotMainStack/DocumentProcessorArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentProcessorArn"
+          }
+        ],
+        "/ChatbotMainStack/DocumentUploadHandlerArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DocumentUploadHandlerArn"
+          }
+        ],
+        "/ChatbotMainStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/ChatbotMainStack/CDKMetadata/Condition": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadataAvailable"
+          }
+        ],
+        "/ChatbotMainStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/ChatbotMainStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "ChatbotMainStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    },
+    "aws-cdk-lib/feature-flag-report": {
+      "type": "cdk:feature-flag-report",
+      "properties": {
+        "module": "aws-cdk-lib",
+        "flags": {
+          "@aws-cdk/aws-signer:signingProfileNamePassedToCfn": {
+            "recommendedValue": true,
+            "explanation": "Pass signingProfileName to CfnSigningProfile"
+          },
+          "@aws-cdk/core:newStyleStackSynthesis": {
+            "recommendedValue": true,
+            "explanation": "Switch to new stack synthesis method which enables CI/CD",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:stackRelativeExports": {
+            "recommendedValue": true,
+            "explanation": "Name exports based on the construct paths relative to the stack, rather than the global construct path",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-ecs-patterns:secGroupsDisablesImplicitOpenListener": {
+            "recommendedValue": true,
+            "explanation": "Disable implicit openListener when custom security groups are provided"
+          },
+          "@aws-cdk/aws-rds:lowercaseDbIdentifier": {
+            "recommendedValue": true,
+            "explanation": "Force lowercasing of RDS Cluster names in CDK",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": {
+            "recommendedValue": true,
+            "explanation": "Allow adding/removing multiple UsagePlanKeys independently",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-lambda:recognizeVersionProps": {
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to opt in to the updated logical id calculation for Lambda Version created using the  `fn.currentVersion`.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-lambda:recognizeLayerVersion": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to opt in to the updated logical id calculation for Lambda Version created using the `fn.currentVersion`."
+          },
+          "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": {
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to have cloudfront distributions use the security policy TLSv1.2_2021 by default.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:checkSecretUsage": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this flag to make it impossible to accidentally use SecretValues in unsafe locations"
+          },
+          "@aws-cdk/core:target-partitions": {
+            "userValue": [
+              "aws",
+              "aws-cn"
+            ],
+            "recommendedValue": [
+              "aws",
+              "aws-cn"
+            ],
+            "explanation": "What regions to include in lookup tables of environment agnostic stacks"
+          },
+          "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "ECS extensions will automatically add an `awslogs` driver if no logging is specified"
+          },
+          "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to have Launch Templates generated by the `InstanceRequireImdsv2Aspect` use unique names."
+          },
+          "@aws-cdk/aws-ecs:arnFormatIncludesClusterName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "ARN format used by ECS. In the new ARN format, the cluster name is part of the resource ID."
+          },
+          "@aws-cdk/aws-iam:minimizePolicies": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Minimize IAM policies by combining Statements"
+          },
+          "@aws-cdk/core:validateSnapshotRemovalPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Error on snapshot removal policies on resources that do not support it."
+          },
+          "@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate key aliases that include the stack name"
+          },
+          "@aws-cdk/aws-s3:createDefaultLoggingPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature flag to create an S3 bucket policy by default in cases where an AWS service would automatically create the Policy if one does not exist."
+          },
+          "@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Restrict KMS key policy for encrypted Queues a bit more"
+          },
+          "@aws-cdk/aws-apigateway:disableCloudWatchRole": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Make default CloudWatch Role behavior safe for multiple API Gateways in one environment"
+          },
+          "@aws-cdk/core:enablePartitionLiterals": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Make ARNs concrete if AWS partition is known"
+          },
+          "@aws-cdk/aws-events:eventsTargetQueueSameAccount": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Event Rules may only push to encrypted SQS queues in the same account"
+          },
+          "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Avoid setting the \"ECS\" deployment controller when adding a circuit breaker"
+          },
+          "@aws-cdk/aws-iam:importedRoleStackSafeDefaultPolicyName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enable this feature to by default create default policy names for imported roles that depend on the stack the role is in."
+          },
+          "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use S3 Bucket Policy instead of ACLs for Server Access Logging"
+          },
+          "@aws-cdk/aws-route53-patters:useCertificate": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use the official `Certificate` resource instead of `DnsValidatedCertificate`"
+          },
+          "@aws-cdk/customresources:installLatestAwsSdkDefault": {
+            "userValue": false,
+            "recommendedValue": false,
+            "explanation": "Whether to install the latest SDK by default in AwsCustomResource"
+          },
+          "@aws-cdk/aws-rds:databaseProxyUniqueResourceName": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Use unique resource name for Database Proxy"
+          },
+          "@aws-cdk/aws-codedeploy:removeAlarmsFromDeploymentGroup": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Remove CloudWatch alarms from deployment group"
+          },
+          "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Include authorizer configuration in the calculation of the API deployment logical ID."
+          },
+          "@aws-cdk/aws-ec2:launchTemplateDefaultUserData": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Define user data for a launch template by default when a machine image is provided."
+          },
+          "@aws-cdk/aws-secretsmanager:useAttachedSecretResourcePolicyForSecretTargetAttachments": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "SecretTargetAttachments uses the ResourcePolicy of the attached Secret."
+          },
+          "@aws-cdk/aws-redshift:columnId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Whether to use an ID to track Redshift column changes"
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:enableEmrServicePolicyV2": {
+            "recommendedValue": true,
+            "explanation": "Enable AmazonEMRServicePolicy_v2 managed policies"
+          },
+          "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Restrict access to the VPC default security group"
+          },
+          "@aws-cdk/aws-apigateway:requestValidatorUniqueId": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate a unique id for each RequestValidator added to a method"
+          },
+          "@aws-cdk/aws-kms:aliasNameRef": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "KMS Alias name and keyArn will have implicit reference to KMS Key"
+          },
+          "@aws-cdk/aws-kms:applyImportedAliasPermissionsToPrincipal": {
+            "recommendedValue": true,
+            "explanation": "Enable grant methods on Aliases imported by name to use kms:ResourceAliases condition"
+          },
+          "@aws-cdk/aws-autoscaling:generateLaunchTemplateInsteadOfLaunchConfig": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Generate a launch template when creating an AutoScalingGroup"
+          },
+          "@aws-cdk/core:includePrefixInUniqueNameGeneration": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Include the stack prefix in the stack name generation process"
+          },
+          "@aws-cdk/aws-efs:denyAnonymousAccess": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "EFS denies anonymous clients accesses"
+          },
+          "@aws-cdk/aws-opensearchservice:enableOpensearchMultiAzWithStandby": {
+            "recommendedValue": true,
+            "explanation": "Enables support for Multi-AZ with Standby deployment for opensearch domains"
+          },
+          "@aws-cdk/aws-lambda-nodejs:useLatestRuntimeVersion": {
+            "recommendedValue": true,
+            "explanation": "Enables aws-lambda-nodejs.Function to use the latest available NodeJs runtime as the default"
+          },
+          "@aws-cdk/aws-efs:mountTargetOrderInsensitiveLogicalId": {
+            "recommendedValue": true,
+            "explanation": "When enabled, mount targets will have a stable logicalId that is linked to the associated subnet."
+          },
+          "@aws-cdk/aws-rds:auroraClusterChangeScopeOfInstanceParameterGroupWithEachParameters": {
+            "recommendedValue": true,
+            "explanation": "When enabled, a scope of InstanceParameterGroup for AuroraClusterInstance with each parameters will change."
+          },
+          "@aws-cdk/aws-appsync:useArnForSourceApiAssociationIdentifier": {
+            "recommendedValue": true,
+            "explanation": "When enabled, will always use the arn for identifiers for CfnSourceApiAssociation in the GraphqlApi construct rather than id."
+          },
+          "@aws-cdk/aws-rds:preventRenderingDeprecatedCredentials": {
+            "recommendedValue": true,
+            "explanation": "When enabled, creating an RDS database cluster from a snapshot will only render credentials for snapshot credentials."
+          },
+          "@aws-cdk/aws-codepipeline-actions:useNewDefaultBranchForCodeCommitSource": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the CodeCommit source action is using the default branch name 'main'."
+          },
+          "@aws-cdk/aws-cloudwatch-actions:changeLambdaPermissionLogicalIdForLambdaAction": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the logical ID of a Lambda permission for a Lambda action includes an alarm ID."
+          },
+          "@aws-cdk/aws-codepipeline:crossAccountKeysDefaultValueToFalse": {
+            "recommendedValue": true,
+            "explanation": "Enables Pipeline to set the default value for crossAccountKeys to false."
+          },
+          "@aws-cdk/aws-codepipeline:defaultPipelineTypeToV2": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "Enables Pipeline to set the default pipeline type to V2."
+          },
+          "@aws-cdk/aws-kms:reduceCrossAccountRegionPolicyScope": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, IAM Policy created from KMS key grant will reduce the resource scope to this key only."
+          },
+          "@aws-cdk/pipelines:reduceAssetRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "Remove the root account principal from PipelineAssetsFileRole trust policy",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-eks:nodegroupNameAttribute": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, nodegroupName attribute of the provisioned EKS NodeGroup will not have the cluster name prefix."
+          },
+          "@aws-cdk/aws-ec2:ebsDefaultGp3Volume": {
+            "userValue": true,
+            "recommendedValue": true,
+            "explanation": "When enabled, the default volume type of the EBS volume will be GP3"
+          },
+          "@aws-cdk/aws-ecs:removeDefaultDeploymentAlarm": {
+            "userValue": false,
+            "recommendedValue": true,
+            "explanation": "When enabled, remove default deployment alarm settings"
+          },
+          "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": {
+            "recommendedValue": false,
+            "explanation": "When enabled, the custom resource used for `AwsCustomResource` will configure the `logApiResponseData` property as true by default"
+          },
+          "@aws-cdk/aws-s3:keepNotificationInImportedBucket": {
+            "recommendedValue": false,
+            "explanation": "When enabled, Adding notifications to a bucket in the current stack will not remove notification from imported stack."
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:useNewS3UriParametersForBedrockInvokeModelTask": {
+            "recommendedValue": true,
+            "explanation": "When enabled, use new props for S3 URI field in task definition of state machine for bedrock invoke model.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/core:explicitStackTags": {
+            "recommendedValue": true,
+            "explanation": "When enabled, stack tags need to be assigned explicitly on a Stack."
+          },
+          "@aws-cdk/aws-ecs:enableImdsBlockingDeprecatedFeature": {
+            "recommendedValue": false,
+            "explanation": "When set to true along with canContainersAccessInstanceRole=false in ECS cluster, new updated commands will be added to UserData to block container accessing IMDS. **Applicable to Linux only. IMPORTANT: See [details.](#aws-cdkaws-ecsenableImdsBlockingDeprecatedFeature)**"
+          },
+          "@aws-cdk/aws-ecs:disableEcsImdsBlocking": {
+            "recommendedValue": true,
+            "explanation": "When set to true, CDK synth will throw exception if canContainersAccessInstanceRole is false. **IMPORTANT: See [details.](#aws-cdkaws-ecsdisableEcsImdsBlocking)**"
+          },
+          "@aws-cdk/aws-ecs:reduceEc2FargateCloudWatchPermissions": {
+            "recommendedValue": true,
+            "explanation": "When enabled, we will only grant the necessary permissions when users specify cloudwatch log group through logConfiguration"
+          },
+          "@aws-cdk/aws-dynamodb:resourcePolicyPerReplica": {
+            "recommendedValue": true,
+            "explanation": "When enabled will allow you to specify a resource policy per replica, and not copy the source table policy to all replicas"
+          },
+          "@aws-cdk/aws-ec2:ec2SumTImeoutEnabled": {
+            "recommendedValue": true,
+            "explanation": "When enabled, initOptions.timeout and resourceSignalTimeout values will be summed together."
+          },
+          "@aws-cdk/aws-appsync:appSyncGraphQLAPIScopeLambdaPermission": {
+            "recommendedValue": true,
+            "explanation": "When enabled, a Lambda authorizer Permission created when using GraphqlApi will be properly scoped with a SourceArn."
+          },
+          "@aws-cdk/aws-rds:setCorrectValueForDatabaseInstanceReadReplicaInstanceResourceId": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the value of property `instanceResourceId` in construct `DatabaseInstanceReadReplica` will be set to the correct value which is `DbiResourceId` instead of currently `DbInstanceArn`"
+          },
+          "@aws-cdk/core:cfnIncludeRejectComplexResourceUpdateCreatePolicyIntrinsics": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CFN templates added with `cfn-include` will error if the template contains Resource Update or Create policies with CFN Intrinsics that include non-primitive values."
+          },
+          "@aws-cdk/aws-lambda-nodejs:sdkV3ExcludeSmithyPackages": {
+            "recommendedValue": true,
+            "explanation": "When enabled, both `@aws-sdk` and `@smithy` packages will be excluded from the Lambda Node.js 18.x runtime to prevent version mismatches in bundled applications."
+          },
+          "@aws-cdk/aws-stepfunctions-tasks:fixRunEcsTaskPolicy": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the resource of IAM Run Ecs policy generated by SFN EcsRunTask will reference the definition, instead of constructing ARN."
+          },
+          "@aws-cdk/aws-ec2:bastionHostUseAmazonLinux2023ByDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the BastionHost construct will use the latest Amazon Linux 2023 AMI, instead of Amazon Linux 2."
+          },
+          "@aws-cdk/core:aspectStabilization": {
+            "recommendedValue": true,
+            "explanation": "When enabled, a stabilization loop will be run when invoking Aspects during synthesis.",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-route53-targets:userPoolDomainNameMethodWithoutCustomResource": {
+            "recommendedValue": true,
+            "explanation": "When enabled, use a new method for DNS Name of user pool domain target without creating a custom resource."
+          },
+          "@aws-cdk/aws-elasticloadbalancingV2:albDualstackWithoutPublicIpv4SecurityGroupRulesDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the default security group ingress rules will allow IPv6 ingress from anywhere"
+          },
+          "@aws-cdk/aws-iam:oidcRejectUnauthorizedConnections": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the default behaviour of OIDC provider will reject unauthorized connections"
+          },
+          "@aws-cdk/core:enableAdditionalMetadataCollection": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK will expand the scope of usage data collected to better inform CDK development and improve communication for security concerns and emerging issues."
+          },
+          "@aws-cdk/aws-lambda:createNewPoliciesWithAddToRolePolicy": {
+            "recommendedValue": false,
+            "explanation": "[Deprecated] When enabled, Lambda will create new inline policies with AddToRolePolicy instead of adding to the Default Policy Statement"
+          },
+          "@aws-cdk/aws-s3:setUniqueReplicationRoleName": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK will automatically generate a unique role name that is used for s3 object replication."
+          },
+          "@aws-cdk/pipelines:reduceStageRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "Remove the root account principal from Stage addActions trust policy",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-events:requireEventBusPolicySid": {
+            "recommendedValue": true,
+            "explanation": "When enabled, grantPutEventsTo() will use resource policies with Statement IDs for service principals."
+          },
+          "@aws-cdk/core:aspectPrioritiesMutating": {
+            "recommendedValue": true,
+            "explanation": "When set to true, Aspects added by the construct library on your behalf will be given a priority of MUTATING."
+          },
+          "@aws-cdk/aws-dynamodb:retainTableReplica": {
+            "recommendedValue": true,
+            "explanation": "When enabled, table replica will be default to the removal policy of source table unless specified otherwise."
+          },
+          "@aws-cdk/cognito:logUserPoolClientSecretValue": {
+            "recommendedValue": false,
+            "explanation": "When disabled, the value of the user pool client secret will not be logged in the custom resource lambda function logs."
+          },
+          "@aws-cdk/pipelines:reduceCrossAccountActionRoleTrustScope": {
+            "recommendedValue": true,
+            "explanation": "When enabled, scopes down the trust policy for the cross-account action role",
+            "unconfiguredBehavesLike": {
+              "v2": true
+            }
+          },
+          "@aws-cdk/aws-stepfunctions:useDistributedMapResultWriterV2": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the resultWriterV2 property of DistributedMap will be used insted of resultWriter"
+          },
+          "@aws-cdk/s3-notifications:addS3TrustKeyPolicyForSnsSubscriptions": {
+            "recommendedValue": true,
+            "explanation": "Add an S3 trust policy to a KMS key resource policy for SNS subscriptions."
+          },
+          "@aws-cdk/aws-ec2:requirePrivateSubnetsForEgressOnlyInternetGateway": {
+            "recommendedValue": true,
+            "explanation": "When enabled, the EgressOnlyGateway resource is only created if private subnets are defined in the dual-stack VPC."
+          },
+          "@aws-cdk/aws-ec2-alpha:useResourceIdForVpcV2Migration": {
+            "recommendedValue": false,
+            "explanation": "When enabled, use resource IDs for VPC V2 migration"
+          },
+          "@aws-cdk/aws-s3:publicAccessBlockedByDefault": {
+            "recommendedValue": true,
+            "explanation": "When enabled, setting any combination of options for BlockPublicAccess will automatically set true for any options not defined."
+          },
+          "@aws-cdk/aws-lambda:useCdkManagedLogGroup": {
+            "recommendedValue": true,
+            "explanation": "When enabled, CDK creates and manages loggroup for the lambda function"
+          }
+        }
+      }
+    }
+  },
+  "minimumCliVersion": "2.1029.4"
+}

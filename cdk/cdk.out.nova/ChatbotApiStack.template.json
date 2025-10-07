@@ -1,0 +1,654 @@
+{
+ "Resources": {
+  "WebSocketApiConstructChatbotWebSocketApi78B4F282": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "Description": "WebSocket API for real-time chatbot communication",
+    "Name": "chatbot-websocket-api",
+    "ProtocolType": "WEBSOCKET",
+    "RouteSelectionExpression": "$request.body.action"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApiconnectRouteConnectIntegrationPermission4D3BF097": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+       },
+       "/*$connect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/ConnectIntegration-Permission"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApiconnectRouteConnectIntegrationF5C8BD8C": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":lambda:path/2015-03-31/functions/",
+       {
+        "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/ConnectIntegration/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApiconnectRoute459173D2": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$connect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApiconnectRouteConnectIntegrationF5C8BD8C"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$connect-Route/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidisconnectRouteDisconnectIntegrationPermission5BCF4822": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+       },
+       "/*$disconnect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/DisconnectIntegration-Permission"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidisconnectRouteDisconnectIntegration787A7ED4": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":lambda:path/2015-03-31/functions/",
+       {
+        "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/DisconnectIntegration/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidisconnectRouteE9B71319": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$disconnect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApidisconnectRouteDisconnectIntegration787A7ED4"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$disconnect-Route/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidefaultRouteDefaultIntegrationPermissionFBB2E962": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+       },
+       "/*$default"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/DefaultIntegration-Permission"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidefaultRouteDefaultIntegrationD5E8FF0D": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":lambda:path/2015-03-31/functions/",
+       {
+        "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/DefaultIntegration/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketApidefaultRoute9C772C58": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$default",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WebSocketApiConstructChatbotWebSocketApidefaultRouteDefaultIntegrationD5E8FF0D"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketApi/$default-Route/Resource"
+   }
+  },
+  "WebSocketApiConstructChatbotWebSocketStage39C4D9A4": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+    },
+    "AutoDeploy": true,
+    "StageName": "prod"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/WebSocketApiConstruct/ChatbotWebSocketStage/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12NsQ6CQBBEv4X+WBUKY2msrCRQWJoFVlyBO8LtSQjh3z000YRqZt7OZCOIdgfYBjjYsCjrsOEcpkywqJVHtwk7rlBowPEVwXSlPDNFTXLsWJ3uepEfS40T+sezFqp6FDZ6qa7iquw/VrTwj5lVg21eIniQUN+ytX42L/eLk87JrJJRHkZvYtjFsA+eljnsnRZuCdKvvgFjhcUI2gAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotApiStack/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "WebSocketApiConstructWebSocketApiEndpoint5F9D3FC2": {
+   "Description": "WebSocket API endpoint URL",
+   "Value": {
+    "Fn::GetAtt": [
+     "WebSocketApiConstructChatbotWebSocketApi78B4F282",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "WebSocketApiConstructWebSocketApiId0BA3ADD6": {
+   "Description": "WebSocket API ID",
+   "Value": {
+    "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+   }
+  },
+  "ExportsOutputFnGetAttWebSocketApiConstructChatbotWebSocketApi78B4F282ApiEndpointAB801ADF": {
+   "Value": {
+    "Fn::GetAtt": [
+     "WebSocketApiConstructChatbotWebSocketApi78B4F282",
+     "ApiEndpoint"
+    ]
+   },
+   "Export": {
+    "Name": "ChatbotApiStack:ExportsOutputFnGetAttWebSocketApiConstructChatbotWebSocketApi78B4F282ApiEndpointAB801ADF"
+   }
+  },
+  "ExportsOutputRefWebSocketApiConstructChatbotWebSocketApi78B4F28236B3596B": {
+   "Value": {
+    "Ref": "WebSocketApiConstructChatbotWebSocketApi78B4F282"
+   },
+   "Export": {
+    "Name": "ChatbotApiStack:ExportsOutputRefWebSocketApiConstructChatbotWebSocketApi78B4F28236B3596B"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

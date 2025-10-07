@@ -1,0 +1,442 @@
+{
+ "Outputs": {
+  "WebSocketApiEndpoint": {
+   "Description": "WebSocket API endpoint URL for client connections",
+   "Value": {
+    "Fn::ImportValue": "ChatbotApiStack:ExportsOutputFnGetAttWebSocketApiConstructChatbotWebSocketApi78B4F282ApiEndpointAB801ADF"
+   },
+   "Export": {
+    "Name": "ChatbotWebSocketEndpoint"
+   }
+  },
+  "WebSocketApiId": {
+   "Description": "WebSocket API ID",
+   "Value": {
+    "Fn::ImportValue": "ChatbotApiStack:ExportsOutputRefWebSocketApiConstructChatbotWebSocketApi78B4F28236B3596B"
+   },
+   "Export": {
+    "Name": "ChatbotWebSocketApiId"
+   }
+  },
+  "SessionsTableName": {
+   "Description": "Sessions DynamoDB table name",
+   "Value": {
+    "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+   },
+   "Export": {
+    "Name": "ChatbotSessionsTable"
+   }
+  },
+  "ConversationsTableName": {
+   "Description": "Conversations DynamoDB table name",
+   "Value": {
+    "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefConversationsTableCD91EB96EE2E4585"
+   },
+   "Export": {
+    "Name": "ChatbotConversationsTable"
+   }
+  },
+  "AnalyticsTableName": {
+   "Description": "Analytics DynamoDB table name",
+   "Value": {
+    "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefAnalyticsTable3F84C30437863EDE"
+   },
+   "Export": {
+    "Name": "ChatbotAnalyticsTable"
+   }
+  },
+  "WebSocketHandlerArn": {
+   "Description": "WebSocket handler Lambda function ARN",
+   "Value": {
+    "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+   },
+   "Export": {
+    "Name": "ChatbotWebSocketHandlerArn"
+   }
+  },
+  "McpServerArn": {
+   "Description": "MCP server Lambda function ARN",
+   "Value": {
+    "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttMcpServerConstructMcpServer97485EDEArnE53FDEF6"
+   },
+   "Export": {
+    "Name": "ChatbotMcpServerArn"
+   }
+  },
+  "SessionCleanupArn": {
+   "Description": "Session cleanup Lambda function ARN",
+   "Value": {
+    "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputFnGetAttSessionCleanupAC8C796BArnF08EF869"
+   },
+   "Export": {
+    "Name": "ChatbotSessionCleanupArn"
+   }
+  },
+  "ApiSecretsArn": {
+   "Description": "API secrets ARN in Secrets Manager",
+   "Value": {
+    "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputRefApiSecretsED109BDA59A7E068"
+   },
+   "Export": {
+    "Name": "ChatbotApiSecretsArn"
+   }
+  },
+  "McpSecretsArn": {
+   "Description": "MCP server secrets ARN in Secrets Manager",
+   "Value": {
+    "Fn::ImportValue": "ChatbotLambdaStack:ExportsOutputRefMcpServerConstructMcpServerSecretsD3E081191D5ED69F"
+   },
+   "Export": {
+    "Name": "ChatbotMcpSecretsArn"
+   }
+  },
+  "DocumentsBucketName": {
+   "Description": "S3 bucket name for RAG documents",
+   "Value": {
+    "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputRefDocumentsBucket9EC9DEB9131399C0"
+   },
+   "Export": {
+    "Name": "ChatbotDocumentsBucketName"
+   }
+  },
+  "ProcessedDocumentsBucketName": {
+   "Description": "S3 bucket name for processed document chunks",
+   "Value": {
+    "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputRefProcessedDocumentsBucket0748053A42BFD98D"
+   },
+   "Export": {
+    "Name": "ChatbotProcessedDocumentsBucketName"
+   }
+  },
+  "DocumentProcessorArn": {
+   "Description": "Document processor Lambda function ARN",
+   "Value": {
+    "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputFnGetAttDocumentProcessor3D49A083ArnB97F8912"
+   },
+   "Export": {
+    "Name": "ChatbotDocumentProcessorArn"
+   }
+  },
+  "DocumentUploadHandlerArn": {
+   "Description": "Document upload handler Lambda function ARN",
+   "Value": {
+    "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputFnGetAttDocumentUploadHandlerA7645B2AArnF0832A60"
+   },
+   "Export": {
+    "Name": "ChatbotDocumentUploadHandlerArn"
+   }
+  }
+ },
+ "Resources": {
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/zPSMzK01DNQTCwv1k1OydbNyUzSqw4uSUzO1nFOy/MvLSkoLanVCagsycjP0zfWMzTWM1fMKs7M1C0qzSvJzE3VC4LQAPRf5a1IAAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotMainStack/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

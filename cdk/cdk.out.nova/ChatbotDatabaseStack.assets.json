@@ -1,0 +1,20 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "565903e44ed407440a6c8d36fd5db94b0c67173c25f60efdedc0610696203f84": {
+      "displayName": "ChatbotDatabaseStack Template",
+      "source": {
+        "path": "ChatbotDatabaseStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region-44296400": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "565903e44ed407440a6c8d36fd5db94b0c67173c25f60efdedc0610696203f84.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

@@ -1,0 +1,240 @@
+# AEON User-Side Chatbot
+
+A modern, real-time chat application built with React, TypeScript, and WebSocket technology for seamless AI-powered conversations.
+
+## Features
+
+- Real-time messaging via WebSocket connections
+- AI-powered responses with streaming support
+- Session management with automatic cleanup (3 minutes timeout)
+- Responsive design with Tailwind CSS
+- Markdown support for rich text formatting
+- Modern UI components with Radix UI and Lucide icons
+- Form validation with Zod and React Hook Form
+- Smooth animations with Framer Motion
+- Auto-scroll functionality
+- Loading states with visual feedback
+- Error handling with toast notifications
+- Accessibility compliant components
+- Performance optimized with code splitting
+
+## Tech Stack
+
+### Core
+- React 18.2.0
+- TypeScript 5.2.2
+- Vite 5.2.0
+
+### Styling
+- Tailwind CSS 3.4.15
+- SCSS/Sass 1.74.1
+- PostCSS 8.4.49
+
+### UI Components
+- Radix UI (Dropdown Menu, Slot)
+- Lucide React 0.461.0
+- React Icons 5.3.0
+
+### State & Forms
+- TanStack React Query 5.61.4
+- React Hook Form 7.54.0
+- Zod 3.25.76
+
+### Communication
+- react-use-websocket 4.8.1
+- AWS Amplify 5.2.1
+- Axios 1.6.8
+
+### Content
+- React Markdown 9.0.1
+- remark-gfm 4.0.0
+- Framer Motion 11.11.17
+
+### Utilities
+- Day.js 1.11.11
+- React Hot Toast 2.4.1
+- clsx 2.1.1
+
+## Project Structure
+
+```
+aeon.web.chat/
+├── public/                 # Static assets
+├── src/
+│   ├── assets/            # Images and static files
+│   ├── components/        # Reusable UI components
+│   │   ├── generic/       # Layout components
+│   │   └── ui/           # Base UI components
+│   ├── constants/         # API endpoints and constants
+│   ├── fonts/            # Custom font files
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utility libraries
+│   ├── utils/            # Helper functions
+│   └── views/            # Page components
+│       └── chat/         # Chat-specific components
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+└── tsconfig.json
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd aeon-usersidechatbot/aeon.web.chat
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run codegen` - Generate GraphQL code (AWS AppSync)
+
+## Configuration
+
+### Environment Variables
+
+The application uses hardcoded endpoints in `src/constants/apiEndpoints.tsx`:
+- WebSocket endpoint for real-time messaging
+- Session close endpoint for cleanup
+
+### WebSocket Connection
+
+The chat functionality connects to AWS API Gateway WebSocket endpoint:
+```typescript
+const WEBSOCKET_ENDPOINT = "wss://k1wj10zxv9.execute-api.us-east-1.amazonaws.com/dev";
+```
+
+## Architecture
+
+### Core Components
+
+#### ChatPage
+Main chat interface component that renders the conversation UI and message input form.
+
+#### useChat Hook
+Custom hook managing:
+- WebSocket connection state
+- Message state management
+- Form handling
+- Session lifecycle
+- Inactivity timeout (3 minutes)
+
+#### Message Flow
+1. User types message and submits
+2. Message sent via WebSocket to backend
+3. AI response streamed back in real-time
+4. Messages rendered with markdown support
+
+### Session Management
+
+- **Unique User ID**: Generated using UUID for each session
+- **Inactivity Timeout**: 3-minute timeout with automatic session cleanup
+- **Page Visibility**: Handles tab switching and window focus
+- **Graceful Cleanup**: Sends session close events on page unload
+
+### Message Types
+
+```typescript
+type Message = {
+  messageId: string;
+  contents: string;
+  sender: "user" | "assistant";
+  messageStop?: boolean;
+  reasoningContents?: string;
+};
+
+type ConnectionStatus = "Connecting" | "Open" | "Closing" | "Closed" | "Uninstantiated";
+
+interface ChatState {
+  messages: Message[];
+  userId: string;
+  connectionStatus: ConnectionStatus;
+  form: UseFormReturn;
+}
+```
+
+## UI/UX Features
+
+- Smooth animations with Framer Motion
+- Auto-scroll to latest messages
+- Loading states with animated dots
+- Responsive mobile-first design
+- Markdown rendering with syntax highlighting
+- External links open in new tabs
+- Distinct message bubbles for user/assistant
+- Inter font typography
+- Connection status indicators
+- Toast notifications for errors
+- Accessibility with ARIA labels
+- Keyboard navigation support
+- Hover and focus states
+
+### Custom Hooks
+
+- `useChat` - Main chat functionality with WebSocket management
+- `useClientPagination` - Client-side pagination logic
+- `useDebounce` - Input debouncing utility
+
+### Utility Functions
+
+- `jsonHelpers.ts` - JSON manipulation utilities
+- `utilityFunctions.ts` - General helper functions
+- `utils.ts` - Class name utilities (clsx integration)
+
+## WebSocket Events
+
+**Outgoing Messages:**
+```json
+{
+  "message": "User message text",
+  "message_id": "unique-message-id",
+  "user_id": "unique-user-id"
+}
+```
+
+**Incoming Messages:**
+```json
+{
+  "status_code": 200,
+  "answer": "AI response text",
+  "message_id": "message-id",
+  "message_stop": true,
+  "replace": false,
+  "reasoning_contents": "optional reasoning"
+}
+```
+
+## Session Management API
+
+**Session Close:**
+```json
+POST /conversation-update
+{
+  "sessionId": "user-session-id",
+  "agent": "ai"
+}
+```

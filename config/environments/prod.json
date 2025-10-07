@@ -1,0 +1,48 @@
+{
+  "environment": "prod",
+  "region": "us-east-1",
+  "stackNamePrefix": "ChatbotProd",
+  "lambdaConfig": {
+    "websocketHandler": {
+      "memorySize": 512,
+      "timeout": 30,
+      "logLevel": "INFO"
+    },
+    "mcpServer": {
+      "memorySize": 1024,
+      "timeout": 300,
+      "logLevel": "INFO"
+    },
+    "sessionCleanup": {
+      "memorySize": 256,
+      "timeout": 300,
+      "logLevel": "INFO",
+      "scheduleRate": "rate(30 minutes)"
+    }
+  },
+  "dynamodbConfig": {
+    "billingMode": "PAY_PER_REQUEST",
+    "pointInTimeRecovery": true,
+    "removalPolicy": "RETAIN"
+  },
+  "bedrockConfig": {
+    "claudeModel": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "embeddingModel": "amazon.titan-embed-text-v1"
+  },
+  "secretsConfig": {
+    "apiKeys": {
+      "secretName": "chatbot-prod/api-keys",
+      "description": "API keys for production environment"
+    },
+    "mcpServer": {
+      "secretName": "chatbot-prod/mcp-server",
+      "description": "MCP server configuration for production"
+    }
+  },
+  "monitoring": {
+    "enableDetailedMetrics": true,
+    "logRetentionDays": 30,
+    "enableXRayTracing": true,
+    "enableAlarms": true
+  }
+}

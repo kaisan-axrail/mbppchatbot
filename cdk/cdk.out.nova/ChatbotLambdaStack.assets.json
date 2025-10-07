@@ -1,0 +1,62 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "c6b907c2c6dd088f440ed8cc5d2007748df0a3a26474c930ada1d2225fdfdf77": {
+      "displayName": "WebSocketHandler/Code",
+      "source": {
+        "path": "asset.c6b907c2c6dd088f440ed8cc5d2007748df0a3a26474c930ada1d2225fdfdf77",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-099a2e5c": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "c6b907c2c6dd088f440ed8cc5d2007748df0a3a26474c930ada1d2225fdfdf77.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "6b57b9415e565de4dec459ad170bc484f93f4c4fce6e9a4eda6ab5d2f2d65a69": {
+      "displayName": "SessionCleanup/Code",
+      "source": {
+        "path": "asset.6b57b9415e565de4dec459ad170bc484f93f4c4fce6e9a4eda6ab5d2f2d65a69",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-7bd1282b": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "6b57b9415e565de4dec459ad170bc484f93f4c4fce6e9a4eda6ab5d2f2d65a69.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "2ce4bc4183b4c0fa4b5b4c9ae1d68ff2042789e3810a90a373a4290d71ec91a0": {
+      "displayName": "McpServerConstruct/McpServer/Code",
+      "source": {
+        "path": "asset.2ce4bc4183b4c0fa4b5b4c9ae1d68ff2042789e3810a90a373a4290d71ec91a0",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-2808f196": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "2ce4bc4183b4c0fa4b5b4c9ae1d68ff2042789e3810a90a373a4290d71ec91a0.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "d1e909b550214e3c58c7e63e32a10715b51641d3073b8a88cbf38144a3eedd61": {
+      "displayName": "ChatbotLambdaStack Template",
+      "source": {
+        "path": "ChatbotLambdaStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region-47866894": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "d1e909b550214e3c58c7e63e32a10715b51641d3073b8a88cbf38144a3eedd61.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

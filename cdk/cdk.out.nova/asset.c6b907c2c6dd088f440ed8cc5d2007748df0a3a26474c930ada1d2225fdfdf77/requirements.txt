@@ -1,0 +1,6 @@
+# WebSocket handler Lambda dependencies
+boto3>=1.34.0
+botocore>=1.34.0
+strands-agents>=1.0.0
+strands-agents-tools>=1.0.0
+jsonschema>=4.20.0

@@ -1,0 +1,210 @@
+Naming Conventions
+Variable Names: Variables and function arguments use camelCase.
+Constants: Constants (environment variables) are named in uppercase snake cases.
+Function Names: Function names follow camelCase.
+Class Names: Custom exception classes follow CapWords naming style.
+Examples
+Variable Names
+
+ arguments = event.get('arguments')
+ accountNo = arguments.get('accountNo')
+ merchantId = arguments.get('merchantId')
+
+
+
+Constants
+
+VISTA_ENDPOINT = os.environ.get('VISTA_ENDPOINT')  
+CUSTOMER_TABLE = os.environ.get('CUSTOMER_TABLE')  
+VISTA_SECRET = os.environ.get('VISTA_SECRET')  
+
+
+
+Function Names
+
+def getVistaApiToken():  
+    secret = SECRETS_MANAGER_CLIENT.get_secret_value(SecretId=VISTA_SECRET)  
+    secret_string = secret.get('SecretString')  
+    value = json.loads(secret_string)  
+    return value 
+
+
+
+Class Names
+
+class BadRequestError(Exception):  
+    pass  
+
+class NotFoundError(Exception):  
+    pass 
+
+
+Function Type Annotations (PEP 484)
+Type Annotations (PEP 484): Help make code more readable, catch errors early, and improve documentation.
+Return Type Annotation: Specify the expected type of a function’s return value. This helps with code readability, debugging, and static type checking.
+Examples
+
+Basic Example
+def createUser(name: str, age: int) -> dict:
+    """Creates a user dictionary with name and age."""
+    return {"name": name, "age": age}
+
+
+
+
+Key Points:
+name: str → Specifies that name should be a string.
+age: int → Specifies that age should be an integer.
+-> dict → Specifies that the function returns a dictionary.
+
+Example with Optional and Default Values
+from typing import Optional
+
+def createUser(name: str, age: Optional[int] = None) -> dict:
+    """Creates a user dictionary, age is optional."""
+    return {"name": name, "age": age if age is not None else "Not Provided"}
+
+
+
+
+
+Key Points:
+Optional[int] → Means age can be an int or None.
+= None → Default value is None if not provided.
+
+Imports
+PEP8 specifies the recommended order for imports:
+Standard Library Imports  (os, json, datetime, time, re) 
+Third-Party Library Imports (boto3, requests)
+Local Application Imports (custom_exceptions)
+Grouping and Spacing Between Imports
+Imports are grouped correctly with a blank line between standard, third-party, and local imports.
+This makes the code readable and maintainable.
+Importing Specific Functions/Classes Instead of the Whole Module
+Instead of importing an entire module (from datetime import *), it imports only the required classes/functions
+This follows PEP8 best practices, avoiding unnecessary namespace pollution.
+No Unused Imports
+All imported modules seem relevant to AWS Lambda usage (DynamoDB, API requests, logging, auditing).
+PEP8 discourages unnecessary imports (import but not used).
+Examples
+
+import os
+import json
+import re
+import time
+
+import boto3
+import requests  # Standard and Third-Party Modules
+
+from boto3.dynamodb.conditions import Key
+from aws_lambda_powertools import Logger, Tracer  # Third-Party Modules
+
+from datetime import datetime, timedelta, timezone  # Standard Library
+
+from custom_exceptions import BadRequestError, NotFoundError
+from vistaHelper import getVistaSessionId, sendToAuditLogSQS  # Local Modules
+
+
+
+Import only the required classes/function
+⚠️ import datetime
+
+⚠️ from json import *
+ 
+✅ from datetime import datetime, timedelta, timezone
+
+✅ from json import loads, dumps
+
+
+
+Readability & Line Length
+Docstrings & Comments: Though function docstrings are missing, some inline comments provide clarity.
+Line Length: Most lines are within PEP8’s recommended 79 characters for general code and 72 characters for docstrings/comments.
+
+Exception Handling
+Uses try-except blocks
+Specific exceptions (BadRequestError, NotFoundError) are caught before a generic exception.
+
+Examples
+
+try:
+    arguments = event.get('arguments')
+    accountNo = arguments.get('accountNo')
+except (BadRequestError, NotFoundError) as ex:
+    return {'status': False, 'message': str(ex)}
+except Exception as ex:
+    logger.exception({"message": str(ex)})
+
+
+Logging & Debugging
+Use aws_lambda_powertools.Logger() for structured logging.
+Includes tracing with aws_lambda_powertools.Tracer().
+
+Examples
+
+from aws_lambda_powertools import Logger, Tracer
+
+
+logger = Logger()
+tracer = Tracer()
+
+@tracer.capture_lambda_handler
+def lambda_handler(event, context):
+try:
+    arguments = event.get('arguments')
+    accountNo = arguments.get('accountNo')
+except (BadRequestError, NotFoundError) as ex:
+    return {'status': False, 'message': str(ex)}
+except Exception as ex:
+    tracer.put_annotation("lambda_error", "true")
+    tracer.put_annotation("lambda_name", context.function_name)
+    tracer.put_metadata("event", event)
+    tracer.put_metadata("message", str(ex))
+    logger.exception({"message": str(ex)})
+
+
+
+@tracer.capture_method
+def getVistaAPIToken():
+    secret = SECRETS_MANAGER_CLIENT.get_secret_value(SecretId=VISTA_SECRET)  
+    secret_string = secret.get('SecretString')  
+    value = json.loads(secret_string)  
+    return value 
+
+
+
+Redundancy/Repetitive Function
+Examples
+
+Redundant and Scattered Functions
+# Function_A.py
+def add_numbers(a, b):
+    return a + b
+
+def sum_two_numbers(x, y):
+    return x + y  # Redundant function, does the same thing
+
+# Function_B.py
+def calculate_sum(a, b):
+    return a + b  # Another duplicate function
+
+
+
+Issues:
+Similar functions spread across different files.
+Code duplication increases maintenance effort.
+
+PEP8 Compliant - Grouped in One Place
+Instead of repeating functions, consolidate them in a single utility module:
+# utils.py
+def add_numbers(a: int, b: int) -> int:
+    """Returns the sum of two numbers."""
+    return a + b
+
+
+
+
+Fixes:
+Groups function logically in a utils.py module or a custom Lambda Layer.
+Removes redundancy (only one function for addition).
+Adds type hints and docstrings for better readability.

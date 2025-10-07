@@ -1,0 +1,62 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6": {
+      "displayName": "ChatbotStorageStack/Custom::S3AutoDeleteObjectsCustomResourceProvider Code",
+      "source": {
+        "path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-e31788a2": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "ff5c749aae928b4c3ef4b47e43b3cfeb8c74bc259613ff85cc052f9bbfef9983": {
+      "displayName": "DocumentProcessor/Code",
+      "source": {
+        "path": "asset.ff5c749aae928b4c3ef4b47e43b3cfeb8c74bc259613ff85cc052f9bbfef9983",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-b04c3fbd": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "ff5c749aae928b4c3ef4b47e43b3cfeb8c74bc259613ff85cc052f9bbfef9983.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "4e60e932cf87b4235dfe9892ea1b61c31f7024db0acbfab7d8e6a9f8c54e6724": {
+      "displayName": "DocumentUploadHandler/Code",
+      "source": {
+        "path": "asset.4e60e932cf87b4235dfe9892ea1b61c31f7024db0acbfab7d8e6a9f8c54e6724",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "current_account-current_region-065f81c6": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "4e60e932cf87b4235dfe9892ea1b61c31f7024db0acbfab7d8e6a9f8c54e6724.zip",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    },
+    "4f30f65f582eecb403d2fb8069264f42d1a2bec1f61d0f68d74e72f95392c36c": {
+      "displayName": "ChatbotStorageStack Template",
+      "source": {
+        "path": "ChatbotStorageStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region-4607ecd0": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "4f30f65f582eecb403d2fb8069264f42d1a2bec1f61d0f68d74e72f95392c36c.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

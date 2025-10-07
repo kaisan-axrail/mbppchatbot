@@ -1,0 +1,1087 @@
+{
+ "Resources": {
+  "ApiSecretsED109BDA": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "API keys and sensitive configuration for chatbot system",
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#336130e2-3ab1-416e-bbe3-4690eb464001*()|[]{}:;<>?!'/@\"\\",
+     "GenerateStringKey": "generated_key",
+     "PasswordLength": 32,
+     "SecretStringTemplate": "{\"strand_api_key\": \"placeholder\", \"openai_api_key\": \"placeholder\"}"
+    },
+    "Name": "chatbot/api-keys"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/ApiSecrets/Resource"
+   }
+  },
+  "WebSocketHandlerRole54BB05CE": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:Query",
+          "dynamodb:UpdateItem"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttAnalyticsTable3F84C304ArnFD90B42F"
+          },
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttConversationsTableCD91EB96Arn4A2B28C6"
+          },
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttAnalyticsTable3F84C304ArnFD90B42F"
+             },
+             "/index/*"
+            ]
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttConversationsTableCD91EB96Arn4A2B28C6"
+             },
+             "/index/*"
+            ]
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+             },
+             "/index/*"
+            ]
+           ]
+          }
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "DynamoDBAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "execute-api:ManageConnections",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "ApiGatewayManagement"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          {
+           "Fn::Join": [
+            "",
+            [
+             "arn:aws:bedrock:",
+             {
+              "Ref": "AWS::Region"
+             },
+             "::foundation-model/amazon.titan-embed-text-v1"
+            ]
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             "arn:aws:bedrock:",
+             {
+              "Ref": "AWS::Region"
+             },
+             "::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
+            ]
+           ]
+          }
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "BedrockAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "secretsmanager:GetSecretValue",
+         "Effect": "Allow",
+         "Resource": {
+          "Ref": "ApiSecretsED109BDA"
+         }
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "SecretsManagerAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "lambda:InvokeFunction",
+         "Effect": "Allow",
+         "Resource": {
+          "Fn::Join": [
+           "",
+           [
+            "arn:aws:lambda:",
+            {
+             "Ref": "AWS::Region"
+            },
+            ":",
+            {
+             "Ref": "AWS::AccountId"
+            },
+            ":function:*"
+           ]
+          ]
+         }
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "LambdaInvoke"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/WebSocketHandlerRole/Resource"
+   }
+  },
+  "WebSocketHandler47C0AA1A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "c6b907c2c6dd088f440ed8cc5d2007748df0a3a26474c930ada1d2225fdfdf77.zip"
+    },
+    "Description": "WebSocket handler for chatbot connections and messages",
+    "Environment": {
+     "Variables": {
+      "SESSIONS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+      },
+      "CONVERSATIONS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefConversationsTableCD91EB96EE2E4585"
+      },
+      "ANALYTICS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefAnalyticsTable3F84C30437863EDE"
+      },
+      "SECRETS_ARN": {
+       "Ref": "ApiSecretsED109BDA"
+      },
+      "MCP_SERVER_ARN": {
+       "Fn::GetAtt": [
+        "McpServerConstructMcpServer97485EDE",
+        "Arn"
+       ]
+      },
+      "BEDROCK_REGION": {
+       "Ref": "AWS::Region"
+      },
+      "BEDROCK_INFERENCE_PROFILE_ARN": "",
+      "BEDROCK_CROSS_REGION_PROFILE": "us.amazon.nova-pro-v1:0",
+      "BEDROCK_CLAUDE_MODEL": "amazon.nova-pro-v1:0",
+      "BEDROCK_EMBEDDING_MODEL": "amazon.titan-embed-text-v1",
+      "BEDROCK_CIRCUIT_BREAKER_THRESHOLD": "5",
+      "BEDROCK_CIRCUIT_BREAKER_TIMEOUT": "30",
+      "WEBSOCKET_DOMAIN_NAME": "ynw017q5lc.execute-api.ap-southeast-1.amazonaws.com",
+      "LOG_LEVEL": "INFO"
+     }
+    },
+    "Handler": "handler_working.lambda_handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "WebSocketHandlerRole54BB05CE",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "WebSocketHandlerRole54BB05CE"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/WebSocketHandler/Resource",
+    "aws:asset:path": "asset.c6b907c2c6dd088f440ed8cc5d2007748df0a3a26474c930ada1d2225fdfdf77",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "SessionCleanupRoleC8FA8A84": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan"
+         ],
+         "Effect": "Allow",
+         "Resource": {
+          "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+         }
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "DynamoDBAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "cloudwatch:PutMetricData",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "CloudWatchMetrics"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/SessionCleanupRole/Resource"
+   }
+  },
+  "SessionCleanupAC8C796B": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "6b57b9415e565de4dec459ad170bc484f93f4c4fce6e9a4eda6ab5d2f2d65a69.zip"
+    },
+    "Description": "Automated cleanup of inactive and expired sessions",
+    "Environment": {
+     "Variables": {
+      "SESSIONS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+      },
+      "SESSION_TIMEOUT_MINUTES": "30",
+      "DRY_RUN": "false"
+     }
+    },
+    "Handler": "handler.lambda_handler",
+    "MemorySize": 128,
+    "Role": {
+     "Fn::GetAtt": [
+      "SessionCleanupRoleC8FA8A84",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "SessionCleanupRoleC8FA8A84"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/SessionCleanup/Resource",
+    "aws:asset:path": "asset.6b57b9415e565de4dec459ad170bc484f93f4c4fce6e9a4eda6ab5d2f2d65a69",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "McpServerConstructMcpServerSecretsD3E08119": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Sensitive configuration for MCP server",
+    "GenerateSecretString": {
+     "ExcludeCharacters": " %+~`#$&*()|[]{}:;<>?!'/@\"\\",
+     "GenerateStringKey": "api_key",
+     "PasswordLength": 32,
+     "SecretStringTemplate": "{\"placeholder\": \"value\"}"
+    },
+    "Name": "chatbot/mcp-server"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/McpServerConstruct/McpServerSecrets/Resource"
+   }
+  },
+  "McpServerConstructMcpServerRole0B174941": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v1",
+          "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0"
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "BedrockAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttAnalyticsTable3F84C304ArnFD90B42F"
+          },
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttConversationsTableCD91EB96Arn4A2B28C6"
+          },
+          {
+           "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttAnalyticsTable3F84C304ArnFD90B42F"
+             },
+             "/index/*"
+            ]
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttConversationsTableCD91EB96Arn4A2B28C6"
+             },
+             "/index/*"
+            ]
+           ]
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputFnGetAttSessionsTable7C302024Arn24FF8012"
+             },
+             "/index/*"
+            ]
+           ]
+          }
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "DynamoDBAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "aoss:APIAccessAll",
+          "aoss:DashboardsAccessAll"
+         ],
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "OpenSearchAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "secretsmanager:GetSecretValue",
+         "Effect": "Allow",
+         "Resource": {
+          "Ref": "McpServerConstructMcpServerSecretsD3E08119"
+         }
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "SecretsManagerAccess"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": [
+          "s3:GetObject",
+          "s3:ListBucket"
+         ],
+         "Effect": "Allow",
+         "Resource": [
+          {
+           "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputFnGetAttProcessedDocumentsBucket0748053AArnC4CD5E76"
+          },
+          {
+           "Fn::Join": [
+            "",
+            [
+             {
+              "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputFnGetAttProcessedDocumentsBucket0748053AArnC4CD5E76"
+             },
+             "/*"
+            ]
+           ]
+          }
+         ]
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "S3Access"
+     },
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "cloudwatch:PutMetricData",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "CloudWatchMetrics"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/McpServerConstruct/McpServerRole/Resource"
+   }
+  },
+  "McpServerConstructMcpServer97485EDE": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "2ce4bc4183b4c0fa4b5b4c9ae1d68ff2042789e3810a90a373a4290d71ec91a0.zip"
+    },
+    "Description": "MCP server with RAG and CRUD tools using OpenAPI schema",
+    "Environment": {
+     "Variables": {
+      "SCHEMA_PATH": "/var/task/mcp_tools_schema.yaml",
+      "SESSIONS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefSessionsTable7C3020246E1CCFDD"
+      },
+      "CONVERSATIONS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefConversationsTableCD91EB96EE2E4585"
+      },
+      "ANALYTICS_TABLE": {
+       "Fn::ImportValue": "ChatbotDatabaseStack:ExportsOutputRefAnalyticsTable3F84C30437863EDE"
+      },
+      "PROCESSED_BUCKET": {
+       "Fn::ImportValue": "ChatbotStorageStack:ExportsOutputRefProcessedDocumentsBucket0748053A42BFD98D"
+      },
+      "SECRETS_ARN": {
+       "Ref": "McpServerConstructMcpServerSecretsD3E08119"
+      },
+      "BEDROCK_REGION": "ap-southeast-1",
+      "BEDROCK_INFERENCE_PROFILE_ARN": "",
+      "BEDROCK_CROSS_REGION_PROFILE": "",
+      "EMBEDDING_MODEL": "amazon.titan-embed-text-v1",
+      "LOG_LEVEL": "INFO"
+     }
+    },
+    "Handler": "handler.lambda_handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "McpServerConstructMcpServerRole0B174941",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.11",
+    "Timeout": 300
+   },
+   "DependsOn": [
+    "McpServerConstructMcpServerRole0B174941"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/McpServerConstruct/McpServer/Resource",
+    "aws:asset:path": "asset.2ce4bc4183b4c0fa4b5b4c9ae1d68ff2042789e3810a90a373a4290d71ec91a0",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "SessionCleanupSchedule59730D2C": {
+   "Type": "AWS::Events::Rule",
+   "Properties": {
+    "Description": "Trigger session cleanup Lambda function every hour",
+    "ScheduleExpression": "rate(1 hour)",
+    "State": "ENABLED",
+    "Targets": [
+     {
+      "Arn": {
+       "Fn::GetAtt": [
+        "SessionCleanupAC8C796B",
+        "Arn"
+       ]
+      },
+      "Id": "Target0",
+      "RetryPolicy": {
+       "MaximumRetryAttempts": 2
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/SessionCleanupSchedule/Resource"
+   }
+  },
+  "SessionCleanupScheduleAllowEventRuleChatbotLambdaStackSessionCleanupE7F5E1765D1DF1AD": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SessionCleanupAC8C796B",
+      "Arn"
+     ]
+    },
+    "Principal": "events.amazonaws.com",
+    "SourceArn": {
+     "Fn::GetAtt": [
+      "SessionCleanupSchedule59730D2C",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/SessionCleanupSchedule/AllowEventRuleChatbotLambdaStackSessionCleanupE7F5E176"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/02OzQ4BMRDHn8W9O9g9iCMSV7IeQEaNVbvtSqcl0vTdTXFw+n/8Mh811PMlzCb45Eqf+2owJ0iHgLpXUh0Tk/YU2KLDjrygT1abi/u6rAxaSO04UCmLZjWgPZ0R0jY6HczoCvn3e/LWMEvKipsjMssJWBWRDOuoewprZFL0ICcotfG3XzRn1RKP0WtSnxl5tzOuK3wXwz3KU/tXuI5u2sC8gcXkxsZUPrpgLEH71Tedq6Iq+QAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "ChatbotLambdaStack/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "McpServerConstructMcpServerArn9EC35559": {
+   "Description": "MCP server Lambda function ARN",
+   "Value": {
+    "Fn::GetAtt": [
+     "McpServerConstructMcpServer97485EDE",
+     "Arn"
+    ]
+   }
+  },
+  "McpServerConstructMcpServerName4E451674": {
+   "Description": "MCP server Lambda function name",
+   "Value": {
+    "Ref": "McpServerConstructMcpServer97485EDE"
+   }
+  },
+  "McpServerConstructMcpSecretsArn61B8EC30": {
+   "Description": "MCP server secrets ARN",
+   "Value": {
+    "Ref": "McpServerConstructMcpServerSecretsD3E08119"
+   }
+  },
+  "ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392": {
+   "Value": {
+    "Fn::GetAtt": [
+     "WebSocketHandler47C0AA1A",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "ChatbotLambdaStack:ExportsOutputFnGetAttWebSocketHandler47C0AA1AArn9F4E8392"
+   }
+  },
+  "ExportsOutputFnGetAttMcpServerConstructMcpServer97485EDEArnE53FDEF6": {
+   "Value": {
+    "Fn::GetAtt": [
+     "McpServerConstructMcpServer97485EDE",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "ChatbotLambdaStack:ExportsOutputFnGetAttMcpServerConstructMcpServer97485EDEArnE53FDEF6"
+   }
+  },
+  "ExportsOutputFnGetAttSessionCleanupAC8C796BArnF08EF869": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SessionCleanupAC8C796B",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "ChatbotLambdaStack:ExportsOutputFnGetAttSessionCleanupAC8C796BArnF08EF869"
+   }
+  },
+  "ExportsOutputRefApiSecretsED109BDA59A7E068": {
+   "Value": {
+    "Ref": "ApiSecretsED109BDA"
+   },
+   "Export": {
+    "Name": "ChatbotLambdaStack:ExportsOutputRefApiSecretsED109BDA59A7E068"
+   }
+  },
+  "ExportsOutputRefMcpServerConstructMcpServerSecretsD3E081191D5ED69F": {
+   "Value": {
+    "Ref": "McpServerConstructMcpServerSecretsD3E08119"
+   },
+   "Export": {
+    "Name": "ChatbotLambdaStack:ExportsOutputRefMcpServerConstructMcpServerSecretsD3E081191D5ED69F"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,332 @@
+openapi: 3.0.0
+info:
+  title: Chatbot MCP Tools
+  version: 1.0.0
+  description: MCP tools for RAG document search and CRUD operations
+paths:
+  /search_documents:
+    post:
+      summary: Search documents using vector similarity
+      description: Performs vector similarity search on document collection
+      operationId: search_documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query text
+                  minLength: 1
+                  maxLength: 1000
+                limit:
+                  type: integer
+                  description: Maximum number of results to return
+                  default: 5
+                  minimum: 1
+                  maximum: 20
+                threshold:
+                  type: number
+                  description: Minimum similarity score threshold
+                  default: 0.7
+                  minimum: 0.0
+                  maximum: 1.0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - id
+                    - content
+                    - source
+                    - score
+                  properties:
+                    id:
+                      type: string
+                      description: Unique document chunk identifier
+                    content:
+                      type: string
+                      description: Document chunk content
+                    source:
+                      type: string
+                      description: Source document name or path
+                    score:
+                      type: number
+                      description: Similarity score (0.0 to 1.0)
+                      minimum: 0.0
+                      maximum: 1.0
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /create_record:
+    post:
+      summary: Create a new record in DynamoDB
+      description: Creates a new record in the specified DynamoDB table
+      operationId: create_record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - table
+                - data
+              properties:
+                table:
+                  type: string
+                  description: DynamoDB table name
+                  enum: ["sessions", "conversations", "analytics"]
+                data:
+                  type: object
+                  description: Record data to create
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Record created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - record_id
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  record_id:
+                    type: string
+                    description: Created record identifier
+                  data:
+                    type: object
+                    description: Created record data
+                    additionalProperties: true
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /read_record:
+    post:
+      summary: Read a record from DynamoDB
+      description: Retrieves a record from the specified DynamoDB table
+      operationId: read_record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - table
+                - record_id
+              properties:
+                table:
+                  type: string
+                  description: DynamoDB table name
+                  enum: ["sessions", "conversations", "analytics"]
+                record_id:
+                  type: string
+                  description: Record identifier to retrieve
+                  minLength: 1
+      responses:
+        '200':
+          description: Record retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    description: Retrieved record data
+                    additionalProperties: true
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /update_record:
+    post:
+      summary: Update a record in DynamoDB
+      description: Updates an existing record in the specified DynamoDB table
+      operationId: update_record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - table
+                - record_id
+                - data
+              properties:
+                table:
+                  type: string
+                  description: DynamoDB table name
+                  enum: ["sessions", "conversations", "analytics"]
+                record_id:
+                  type: string
+                  description: Record identifier to update
+                  minLength: 1
+                data:
+                  type: object
+                  description: Updated record data
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Record updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    description: Updated record data
+                    additionalProperties: true
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /delete_record:
+    post:
+      summary: Delete a record from DynamoDB
+      description: Deletes a record from the specified DynamoDB table
+      operationId: delete_record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - table
+                - record_id
+              properties:
+                table:
+                  type: string
+                  description: DynamoDB table name
+                  enum: ["sessions", "conversations", "analytics"]
+                record_id:
+                  type: string
+                  description: Record identifier to delete
+                  minLength: 1
+      responses:
+        '200':
+          description: Record deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    description: Success message
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
