@@ -6,6 +6,7 @@ from aws_cdk import (
     Stack,
     Stage,
     aws_codebuild as codebuild,
+    aws_iam,
     CfnOutput
 )
 from constructs import Construct
@@ -57,7 +58,17 @@ class PipelineStack(Stack):
                 ],
                 build_environment=codebuild.BuildEnvironment(
                     build_image=codebuild.LinuxBuildImage.STANDARD_7_0
-                )
+                ),
+                role_policy_statements=[
+                    aws_iam.PolicyStatement(
+                        actions=["cloudformation:DescribeStacks"],
+                        resources=[f"arn:aws:cloudformation:*:{self.account}:stack/MBPP-*/*"]
+                    ),
+                    aws_iam.PolicyStatement(
+                        actions=["ssm:PutParameter"],
+                        resources=[f"arn:aws:ssm:*:{self.account}:parameter/mbpp/*"]
+                    )
+                ]
             )
         )
 
