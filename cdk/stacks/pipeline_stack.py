@@ -51,7 +51,7 @@ class PipelineStack(Stack):
             pipelines.CodeBuildStep(
                 "SaveWebSocketUrl",
                 commands=[
-                    "WS_URL=$(aws cloudformation describe-stacks --stack-name MBPP-ApiStack --query 'Stacks[0].Outputs[?OutputKey==`WebSocketApiEndpoint`].OutputValue' --output text)",
+                    "WS_URL=$(aws cloudformation describe-stacks --stack-name MBPP-Api --query 'Stacks[0].Outputs[?OutputKey==`WebSocketApiEndpoint`].OutputValue' --output text)",
                     "aws ssm put-parameter --name /mbpp/websocket-url --value $WS_URL --type String --overwrite",
                     "echo WebSocket URL saved to Parameter Store: $WS_URL"
                 ],
