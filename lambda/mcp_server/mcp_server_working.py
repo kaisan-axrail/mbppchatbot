@@ -237,69 +237,76 @@ class MCPChatbotServer:
     
     async def search_documents(self, query: str, limit: int = 5, threshold: float = 0.7) -> Dict[str, Any]:
         """
-        Search documents using Bedrock Knowledge Base.
+        Search documents using both Bedrock Knowledge Bases.
         
         Args:
             query: Search query text
-            limit: Maximum number of results
+            limit: Maximum number of results per knowledge base
             threshold: Minimum similarity score
             
         Returns:
-            Search results from knowledge base
+            Combined search results from both knowledge bases
         """
-        self.logger.info(f"Searching knowledge base for query: {query}")
+        self.logger.info(f"Searching knowledge bases for query: {query}")
         
         try:
-            # Get knowledge base ID from environment
-            knowledge_base_id = os.environ.get('KNOWLEDGE_BASE_ID', '')
-            
-            if not knowledge_base_id:
-                self.logger.warning("KNOWLEDGE_BASE_ID not configured")
-                return {
-                    "success": False,
-                    "results": [],
-                    "query": query,
-                    "total_results": 0,
-                    "error": "Knowledge base not configured"
-                }
+            # Get knowledge base IDs from environment
+            kb_ids = [
+                'U6EAI0DHJC',  # mbpp-faq-knowledgebase
+                'CTFE3RJR01'   # mbpp-knowledgebase-url
+            ]
             
             # Initialize Bedrock Agent Runtime client
             bedrock_agent = boto3.client('bedrock-agent-runtime')
             
-            # Retrieve from knowledge base
-            response = bedrock_agent.retrieve(
-                knowledgeBaseId=knowledge_base_id,
-                retrievalQuery={'text': query},
-                retrievalConfiguration={
-                    'vectorSearchConfiguration': {
-                        'numberOfResults': limit
-                    }
-                }
-            )
+            all_results = []
             
-            # Format results
-            results = []
-            for item in response.get('retrievalResults', []):
-                score = item.get('score', 0.0)
-                if score >= threshold:
-                    results.append({
-                        'content': item.get('content', {}).get('text', ''),
-                        'score': float(score),
-                        'source': item.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
-                        'metadata': item.get('metadata', {})
-                    })
+            # Query each knowledge base
+            for kb_id in kb_ids:
+                try:
+                    response = bedrock_agent.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={'text': query},
+                        retrievalConfiguration={
+                            'vectorSearchConfiguration': {
+                                'numberOfResults': limit
+                            }
+                        }
+                    )
+                    
+                    # Format results
+                    for item in response.get('retrievalResults', []):
+                        score = item.get('score', 0.0)
+                        if score >= threshold:
+                            all_results.append({
+                                'content': item.get('content', {}).get('text', ''),
+                                'score': float(score),
+                                'source': item.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                                'knowledge_base': kb_id,
+                                'metadata': item.get('metadata', {})
+                            })
+                    
+                    self.logger.info(f"Found {len(response.get('retrievalResults', []))} results from KB {kb_id}")
+                    
+                except Exception as kb_error:
+                    self.logger.error(f"Error querying KB {kb_id}: {str(kb_error)}")
+                    continue
             
-            self.logger.info(f"Found {len(results)} documents from knowledge base")
+            # Sort by score and limit total results
+            all_results.sort(key=lambda x: x['score'], reverse=True)
+            all_results = all_results[:limit * 2]  # Return up to 2x limit from both KBs
+            
+            self.logger.info(f"Found {len(all_results)} total documents from both knowledge bases")
             
             return {
                 "success": True,
-                "results": results,
+                "results": all_results,
                 "query": query,
-                "total_results": len(results)
+                "total_results": len(all_results)
             }
             
         except Exception as e:
-            self.logger.error(f"Error searching knowledge base: {str(e)}")
+            self.logger.error(f"Error searching knowledge bases: {str(e)}")
             return {
                 "success": False,
                 "results": [],
