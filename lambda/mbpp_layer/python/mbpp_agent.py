@@ -107,20 +107,19 @@ class MBPPAgent:
         
         message_lower = message.lower()
         
-        # Workflow triggers
-        incident_keywords = ['incident', 'report', 'emergency', 'hazard', 'fallen tree', 
-                            'pothole', 'flood', 'accident', 'blocking', 'complaint']
+        # Service/System error keywords (highest priority)
+        service_keywords = ['website', 'system', 'service', 'portal', 'online', 'app', 'down', 'not working', 'cannot access']
         
-        complaint_keywords = ['complaint', 'feedback', 'service error', 'system down', 
-                             'website', 'not working', 'issue', 'problem']
+        # Physical incident keywords
+        incident_keywords = ['fallen tree', 'pothole', 'flood', 'accident', 'blocking', 'hazard', 'emergency']
         
+        has_service_issue = any(keyword in message_lower for keyword in service_keywords)
         has_incident = any(keyword in message_lower for keyword in incident_keywords)
-        has_complaint = any(keyword in message_lower for keyword in complaint_keywords)
         
-        if has_incident and not has_complaint:
-            return "text_incident"
-        elif has_complaint:
+        if has_service_issue:
             return "complaint"
+        elif has_incident:
+            return "text_incident"
         else:
             return "rag"
     

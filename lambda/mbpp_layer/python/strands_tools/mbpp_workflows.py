@@ -197,7 +197,7 @@ class MBPPWorkflowManager:
                 "details": workflow["data"]["description"],
                 "feedback": "Aduan",
                 "category": "Service/ System Error",
-                "sub_category": "--",
+                "sub_category": "-",
                 "created_at": datetime.now().isoformat()
             }
             
