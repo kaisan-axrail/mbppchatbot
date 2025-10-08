@@ -215,8 +215,7 @@ class MBPPAgent:
             if step == 1: return "step2_submit_info"
             if step == 2: return "step3_confirm"
             if step == 3: return "step4_location"
-            if step == 4: return "step5_hazard"
-            if step >= 5: return "confirm"
+            if step >= 4: return "confirm"
         elif workflow_type == "image_incident":
             if step == 1: return "step2_describe"
             if step == 2: return "step3_details"
@@ -234,9 +233,9 @@ class MBPPAgent:
             elif step == 2:
                 data = {"location": message}
             elif step == 3:
-                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
-            elif step == 4:
                 data = {"hazard_confirmation": "yes" in message.lower()}
+            elif step >= 4:
+                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
         elif workflow_type == "image_incident":
             if step == 1:
                 data = {"confirmation": "yes" if "yes" in message.lower() else "no"}

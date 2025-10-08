@@ -219,26 +219,48 @@ class MBPPWorkflowManager:
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 3
             workflow["data"]["location"] = data.get("location")
-            return {"status": "success", "step": 3, "message": "Can you confirm you would like to report an incident?", "options": ["Yes, report an incident", "Not an incident (Service Complaint / Feedback)"], "workflow_id": workflow_id}
+            
+            # Use AI to generate contextual hazard question
+            description = workflow["data"]["description"]
+            try:
+                bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+                prompt = f"""Based on this incident: "{description}"
+
+Generate a short yes/no question asking if it's causing immediate danger or blocking access. Keep it under 15 words.
+Examples:
+- "Is it blocking the road?"
+- "Is it causing immediate danger?"
+- "Is access blocked?"
+
+Respond with ONLY the question, nothing else."""
+                
+                response = bedrock.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 50,
+                        "messages": [{"role": "user", "content": prompt}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                hazard_question = result['content'][0]['text'].strip()
+            except:
+                hazard_question = "Is it blocking the road or causing immediate danger?"
+            
+            return {"status": "success", "step": 3, "message": hazard_question, "workflow_id": workflow_id}
         
         elif action == "step4_location":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 4
-            workflow["data"]["confirmation"] = data.get("confirmation")
-            return {"status": "success", "step": 4, "message": "Could you confirm if its blocking the road and causing hazard?", "workflow_id": workflow_id}
-        
-        elif action == "step5_hazard":
-            workflow = self.workflows.get(workflow_id)
-            workflow["current_step"] = 5
             workflow["data"]["hazard_confirmation"] = data.get("hazard_confirmation")
             
-            # Classify incident from description
+            # Classify incident and prepare ticket (don't save yet)
             classification = self.classify_incident(workflow["data"]["description"])
             
             ticket_number = self._generate_ticket_number()
             ticket = {
                 "ticket_number": ticket_number,
-                "subject": data.get("subject", "Incident Report"),
+                "subject": "Incident Report",
                 "details": workflow["data"]["description"],
                 "location": workflow["data"]["location"],
                 "feedback": classification["feedback"],
@@ -248,21 +270,46 @@ class MBPPWorkflowManager:
                 "created_at": datetime.now().isoformat()
             }
             
+            # Store ticket in workflow context (not DynamoDB yet)
+            workflow["ticket_number"] = ticket_number
+            workflow["ticket_details"] = ticket
+            
+            # Show ticket details for confirmation
+            confirmation_msg = f"""Please confirm these details:
+
+Ticket #: {ticket_number}
+Description: {ticket['details']}
+Location: {ticket['location']}
+Category: {ticket['category']} - {ticket['sub_category']}
+Blocking Road: {'Yes' if ticket['blocked_road'] else 'No'}
+
+Is this correct? (Yes to submit / No to restart)"""
+            
+            return {"status": "success", "step": 4, "message": confirmation_msg, "workflow_id": workflow_id}
+        
+        elif action == "confirm":
+            workflow = self.workflows.get(workflow_id)
+            confirmation = data.get("confirmation")
+            
+            if confirmation == "no":
+                # Restart workflow
+                workflow["current_step"] = 1
+                workflow["data"] = {}
+                return {"status": "success", "message": "Let's start over. Please describe what happened.", "workflow_id": workflow_id}
+            
+            # Save to DynamoDB only after confirmation
+            ticket = workflow["ticket_details"]
+            
             if workflow["data"].get("image"):
-                image_url = self._save_image(workflow["data"]["image"], ticket_number)
+                image_url = self._save_image(workflow["data"]["image"], ticket["ticket_number"])
                 if image_url:
                     ticket["image_url"] = image_url
             
             self._save_report(ticket)
-            self._create_event('incident_created', ticket_number, workflow["data"])
-            workflow["ticket_number"] = ticket_number
-            
-            return {"status": "success", "step": 5, "message": "Logging the ticket...", "ticket": ticket, "workflow_id": workflow_id}
-        
-        elif action == "confirm":
-            workflow = self.workflows.get(workflow_id)
+            self._create_event('incident_created', ticket["ticket_number"], workflow["data"])
             workflow["status"] = "completed"
-            return {"status": "success", "message": f"Thank you for your submission, a complaint ticket has been logged and the reference number is {workflow['ticket_number']}", "ticket_number": workflow["ticket_number"], "workflow_id": workflow_id}
+            
+            return {"status": "success", "message": f"Thank you for your submission! Your reference number is {workflow['ticket_number']}", "ticket_number": workflow["ticket_number"], "workflow_id": workflow_id}
     
     def image_incident_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
