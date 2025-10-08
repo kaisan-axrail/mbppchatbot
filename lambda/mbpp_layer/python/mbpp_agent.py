@@ -216,7 +216,7 @@ class MBPPAgent:
             if step == 2: return "step3_confirm"
             if step == 3: return "step4_location"
             if step == 4: return "step5_hazard"
-            if step == 5: return "confirm"
+            if step >= 5: return "confirm"
         elif workflow_type == "image_incident":
             if step == 1: return "step2_describe"
             if step == 2: return "step3_details"
@@ -225,42 +225,16 @@ class MBPPAgent:
         return "start"
     
     def _extract_workflow_data(self, workflow_type: str, step: int, message: str, context: dict) -> dict:
-        """Extract data from user message using AI"""
+        """Extract data from user message"""
         data = {}
         
         if workflow_type == "text_incident":
             if step == 1:
-                # Use AI to extract description and location
-                extraction_prompt = f"""Extract the incident description and location from this message:
-"{message}"
-
-Respond ONLY with JSON format:
-{{"description": "what happened", "location": "where it happened"}}
-
-If location is not mentioned, use empty string for location."""
-                
-                try:
-                    response = self.bedrock_runtime.invoke_model(
-                        modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                        body=json.dumps({
-                            "anthropic_version": "bedrock-2023-05-31",
-                            "max_tokens": 200,
-                            "messages": [{"role": "user", "content": extraction_prompt}]
-                        })
-                    )
-                    result = json.loads(response['body'].read())
-                    extracted = json.loads(result['content'][0]['text'])
-                    data = {
-                        "description": extracted.get("description", message),
-                        "location": extracted.get("location", ""),
-                        "image": context["data"].get("image_data")
-                    }
-                except:
-                    data = {"description": message, "location": "", "image": context["data"].get("image_data")}
+                data = {"description": message, "image": context["data"].get("image_data")}
             elif step == 2:
-                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
-            elif step == 3:
                 data = {"location": message}
+            elif step == 3:
+                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
             elif step == 4:
                 data = {"hazard_confirmation": "yes" in message.lower()}
         elif workflow_type == "image_incident":

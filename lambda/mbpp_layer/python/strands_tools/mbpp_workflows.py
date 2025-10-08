@@ -206,30 +206,25 @@ class MBPPWorkflowManager:
     def text_incident_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
             workflow = self.create_workflow("text_incident", workflow_id, data or {})
-            return {"status": "success", "step": 1, "message": "Please describe what happened and tell us the location. You may also share your live location to make it easier (eg. i would like to complain about a pot hole at Jalan Penang ,10000,Georgetown.)", "workflow_id": workflow_id}
+            return {"status": "success", "step": 1, "message": "Please describe what happened.", "workflow_id": workflow_id}
         
         elif action == "step2_submit_info":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 2
             workflow["data"]["description"] = data.get("description")
             workflow["data"]["image"] = data.get("image")
-            if data.get("location"):
-                workflow["data"]["location"] = data.get("location")
-            return {"status": "success", "step": 2, "message": "Can you confirm you would like to report an incident?", "options": ["Yes, report an incident", "Not an incident (Service Complaint / Feedback)"], "workflow_id": workflow_id}
+            return {"status": "success", "step": 2, "message": "Where is this? You can share your live location or type the address.", "workflow_id": workflow_id}
         
         elif action == "step3_confirm":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 3
-            workflow["data"]["confirmation"] = data.get("confirmation")
-            if workflow["data"].get("location"):
-                workflow["current_step"] = 4
-                return {"status": "success", "step": 4, "message": "Could you confirm if its blocking the road and causing hazard?", "workflow_id": workflow_id}
-            return {"status": "success", "step": 3, "message": "Where is this? You can share WhatsApp live location, drop a GPS pin, or type the address.", "workflow_id": workflow_id}
+            workflow["data"]["location"] = data.get("location")
+            return {"status": "success", "step": 3, "message": "Can you confirm you would like to report an incident?", "options": ["Yes, report an incident", "Not an incident (Service Complaint / Feedback)"], "workflow_id": workflow_id}
         
         elif action == "step4_location":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 4
-            workflow["data"]["location"] = data.get("location")
+            workflow["data"]["confirmation"] = data.get("confirmation")
             return {"status": "success", "step": 4, "message": "Could you confirm if its blocking the road and causing hazard?", "workflow_id": workflow_id}
         
         elif action == "step5_hazard":
