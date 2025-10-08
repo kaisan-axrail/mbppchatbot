@@ -175,31 +175,25 @@ class MBPPWorkflowManager:
     def complaint_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
             workflow = self.create_workflow("complaint", workflow_id, data or {})
-            return {"status": "success", "step": 1, "message": "Would you like to report an incident?", "options": ["Not an incident (Service Complaint / Feedback)", "Yes, report an incident"], "workflow_id": workflow_id}
+            return {"status": "success", "step": 1, "message": "Thank you for your feedback. Could you please describe the issue or service/system error?\n\n(e.g. I want to complain about slow response times on a government website.)", "workflow_id": workflow_id}
         
         elif action == "step2_describe":
             workflow = self.workflows.get(workflow_id)
             if not workflow:
                 return {"status": "error", "message": "Workflow not found"}
             workflow["current_step"] = 2
-            workflow["data"]["user_selection"] = data.get("selection")
-            return {"status": "success", "step": 2, "message": "Thank you for your feedback. Could you please describe the issue or service/system error?", "example": "Example: MBPP website down now, cannot access", "workflow_id": workflow_id}
+            workflow["data"]["description"] = data.get("description")
+            return {"status": "success", "step": 2, "message": "Can you please confirm if your internet connection is working properly?", "workflow_id": workflow_id}
         
         elif action == "step3_verify":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 3
-            workflow["data"]["description"] = data.get("description")
-            return {"status": "success", "step": 3, "message": "Can you please confirm if your internet connection is working properly?", "workflow_id": workflow_id}
-        
-        elif action == "step4_log_ticket":
-            workflow = self.workflows.get(workflow_id)
-            workflow["current_step"] = 4
             workflow["data"]["verification"] = data.get("verification")
             
             ticket_number = self._generate_ticket_number()
             ticket = {
                 "ticket_number": ticket_number,
-                "subject": data.get("subject", "Service Error"),
+                "subject": "Service Error",
                 "details": workflow["data"]["description"],
                 "feedback": "Aduan",
                 "category": "Service/ System Error",
@@ -207,16 +201,35 @@ class MBPPWorkflowManager:
                 "created_at": datetime.now().isoformat()
             }
             
-            self._save_report(ticket)
-            self._create_event('complaint_created', ticket_number, workflow["data"])
             workflow["ticket_number"] = ticket_number
-            workflow["status"] = "completed"
+            workflow["ticket_details"] = ticket
             
-            return {"status": "success", "step": 4, "message": "Logging the ticket...", "ticket": ticket, "workflow_id": workflow_id}
+            preview = (
+                "Please confirm these details:\n\n"
+                f"**Subject:** {ticket['subject']}\n\n"
+                f"**Details:** {ticket['details']}\n\n"
+                f"**Category:** {ticket['category']}\n\n"
+                f"**Internet verified:** {'Yes' if workflow['data'].get('verification') else 'No'}\n\n"
+                "Is this correct?"
+            )
+            
+            return {"status": "success", "step": 3, "message": preview, "workflow_id": workflow_id}
         
         elif action == "confirm":
             workflow = self.workflows.get(workflow_id)
-            return {"status": "success", "message": "Thank you for your submission, a complaint ticket has been logged", "ticket_number": workflow["ticket_number"], "workflow_id": workflow_id}
+            confirmation = data.get("confirmation")
+            
+            if confirmation == "no":
+                workflow["current_step"] = 2
+                workflow["data"] = {}
+                return {"status": "success", "message": "Let's start over. Please describe the issue.", "workflow_id": workflow_id}
+            
+            ticket = workflow["ticket_details"]
+            self._save_report(ticket)
+            self._create_event('complaint_created', ticket["ticket_number"], workflow["data"])
+            workflow["status"] = "completed"
+            
+            return {"status": "success", "message": f"Thank you for your submission! Your reference number is {workflow['ticket_number']}", "ticket_number": workflow["ticket_number"], "workflow_id": workflow_id}
     
     def text_incident_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
