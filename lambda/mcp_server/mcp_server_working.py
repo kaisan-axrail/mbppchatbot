@@ -212,6 +212,10 @@ class MCPChatbotServer:
         self.logger.info(f"Executing tool: {tool_name} with parameters: {parameters}")
         
         try:
+            # Handle kwargs string wrapper
+            if 'kwargs' in parameters and isinstance(parameters['kwargs'], str):
+                parameters = json.loads(parameters['kwargs'])
+            
             if tool_name == 'search_documents':
                 return await self.search_documents(**parameters)
             else:
