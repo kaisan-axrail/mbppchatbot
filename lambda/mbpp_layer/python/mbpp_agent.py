@@ -145,13 +145,18 @@ class MBPPAgent:
         
         Use the mbpp_workflow tool to initiate the workflow."""
         
-        response = self.workflow_agent(prompt)
+        try:
+            response = self.workflow_agent(prompt)
+            response_text = str(response.content) if hasattr(response, 'content') else str(response)
+        except Exception as e:
+            print(f"Workflow agent error: {e}")
+            response_text = f"Started {workflow_type} workflow. Please provide the required information."
         
         return {
             "type": "workflow",
             "workflow_type": workflow_type,
             "workflow_id": workflow_id,
-            "response": response,
+            "response": response_text,
             "session_id": session_id
         }
     
@@ -178,7 +183,13 @@ class MBPPAgent:
         
         Use the mbpp_workflow tool to process this step and move to the next."""
         
-        response = self.workflow_agent(prompt)
+        try:
+            response = self.workflow_agent(prompt)
+            response_text = str(response.content) if hasattr(response, 'content') else str(response)
+        except Exception as e:
+            print(f"Workflow continuation error: {e}")
+            response_text = "Processing your response. Please continue."
+            response = response_text
         
         # Update workflow context
         workflow_context["current_step"] += 1
