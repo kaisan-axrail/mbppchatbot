@@ -37,7 +37,7 @@ class MBPPAgent:
             Always be polite, clear, and guide users step-by-step through the process.
             Ask clarifying questions when needed.""",
             tools=[mbpp_workflow],
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+            model="anthropic.claude-sonnet-4-20250514-v1:0"
         )
         
         self.rag_agent = Agent(
@@ -45,7 +45,7 @@ class MBPPAgent:
             You help users find information from MBPP documents and answer general questions.
             Provide accurate, helpful responses based on the available knowledge base.
             If you don't know something, say so clearly.""",
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+            model="anthropic.claude-sonnet-4-20250514-v1:0"
         )
         
         # Track active workflows

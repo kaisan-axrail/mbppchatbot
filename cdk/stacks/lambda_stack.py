@@ -179,7 +179,6 @@ class LambdaStack(Stack):
                 # Circuit breaker configuration
                 "BEDROCK_CIRCUIT_BREAKER_THRESHOLD": "5",
                 "BEDROCK_CIRCUIT_BREAKER_TIMEOUT": "30",
-                "WEBSOCKET_DOMAIN_NAME": "i75sc6a4ul.execute-api.ap-southeast-1.amazonaws.com",
                 "MCP_SSE_ENDPOINT": "https://4fsaarjly6.execute-api.ap-southeast-1.amazonaws.com/prod/mcp/sse",
                 "LOG_LEVEL": "INFO"
             },

@@ -27,25 +27,30 @@ class MBPPAgent:
         
         # Create specialized agents
         self.workflow_agent = Agent(
-            system_prompt="""You are an MBPP incident and complaint management assistant.
-            Your role is to guide users through reporting incidents or complaints.
-            You can handle:
+            system_prompt="""You are an MBPP incident and complaint management assistant. Communicate ONLY in English.
+            
+            When an image is uploaded:
+            - DO NOT analyze the image content
+            - Simply detect that an image was uploaded
+            - Ask: "Image detected. Can you confirm you would like to report an incident?"
+            - Provide options: "Yes, report an incident" or "Not an incident (Service Complaint / Feedback)"
+            
+            Guide users through:
             1. Service/System complaints (website down, service errors)
             2. Text-based incident reports (user describes incident)
             3. Image-based incident reports (user uploads image)
             
-            Always be polite, clear, and guide users step-by-step through the process.
-            Ask clarifying questions when needed.""",
+            Always communicate in English. Be polite, clear, and guide users step-by-step.""",
             tools=[mbpp_workflow],
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
         self.rag_agent = Agent(
-            system_prompt="""You are an MBPP knowledge assistant.
-            You help users find information from MBPP documents and answer general questions.
-            Provide accurate, helpful responses based on the available knowledge base.
+            system_prompt="""You are an MBPP knowledge assistant. Communicate ONLY in English.
+            Help users find information from MBPP documents and answer general questions.
+            Provide accurate, helpful responses in English only.
             If you don't know something, say so clearly.""",
-            model="anthropic.claude-3-5-sonnet-20241022-v2:0"
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
         # Track active workflows
@@ -86,6 +91,10 @@ class MBPPAgent:
     
     def _detect_intent(self, message: str, has_image: bool) -> str:
         """Detect user intent - workflow or RAG query"""
+        # If image is uploaded, trigger image incident workflow immediately
+        if has_image:
+            return "image_incident"
+        
         message_lower = message.lower()
         
         # Workflow triggers
@@ -98,9 +107,7 @@ class MBPPAgent:
         has_incident = any(keyword in message_lower for keyword in incident_keywords)
         has_complaint = any(keyword in message_lower for keyword in complaint_keywords)
         
-        if has_image and has_incident:
-            return "image_incident"
-        elif has_incident and not has_complaint:
+        if has_incident and not has_complaint:
             return "text_incident"
         elif has_complaint:
             return "complaint"

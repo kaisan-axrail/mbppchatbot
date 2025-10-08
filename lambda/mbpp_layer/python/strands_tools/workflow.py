@@ -126,7 +126,11 @@ from strands_tools.utils.models.model import create_model
 logger = logging.getLogger(__name__)
 
 # Constants
-WORKFLOW_DIR = Path(os.getenv("STRANDS_WORKFLOW_DIR", Path.home() / ".strands" / "workflows"))
+# Use /tmp in Lambda, home directory otherwise
+if os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+    WORKFLOW_DIR = Path("/tmp/.strands/workflows")
+else:
+    WORKFLOW_DIR = Path(os.getenv("STRANDS_WORKFLOW_DIR", Path.home() / ".strands" / "workflows"))
 os.makedirs(WORKFLOW_DIR, exist_ok=True)
 
 # Default thread pool settings

@@ -163,7 +163,7 @@ class MBPPWorkflowManager:
     def text_incident_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
             workflow = self.create_workflow("text_incident", workflow_id, data or {})
-            return {"status": "success", "step": 1, "message": "Please share an image of the incident, the location and describe what happened. You may also share your live location to make it easier.", "example": "Example: complaint about a pot hole at specific location", "workflow_id": workflow_id}
+            return {"status": "success", "step": 1, "message": "Please describe what happened and tell us the location. You may also share your live location to make it easier (eg. i would like to complain about a pot hole at Jalan Penang ,10000,Georgetown.)", "workflow_id": workflow_id}
         
         elif action == "step2_submit_info":
             workflow = self.workflows.get(workflow_id)
@@ -228,7 +228,7 @@ class MBPPWorkflowManager:
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 2
             workflow["data"]["confirmation"] = data.get("confirmation")
-            return {"status": "success", "step": 2, "message": "Please describe what happened and tell us the location. You may also share your live location to make it easier.", "example": "Example: complaint about a pot hole at specific location", "workflow_id": workflow_id}
+            return {"status": "success", "step": 2, "message": "Please describe what happened and tell us the location. You may also share your live location to make it easier (eg. i would like to complain about a pot hole at Jalan Penang ,10000,Georgetown.)", "workflow_id": workflow_id}
         
         elif action == "step3_details":
             workflow = self.workflows.get(workflow_id)

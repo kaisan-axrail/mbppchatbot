@@ -25,13 +25,27 @@ from mbpp_agent import MBPPAgent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global variable to cache WebSocket endpoint
+_websocket_endpoint = None
+
 def lambda_handler(event, context):
     """Main Lambda handler for WebSocket events."""
+    global _websocket_endpoint
+    
     try:
         logger.info(f"Received event: {json.dumps(event)}")
         
-        route_key = event.get('requestContext', {}).get('routeKey')
-        connection_id = event.get('requestContext', {}).get('connectionId')
+        # Extract WebSocket endpoint from event context
+        request_context = event.get('requestContext', {})
+        if not _websocket_endpoint:
+            domain_name = request_context.get('domainName')
+            stage = request_context.get('stage')
+            if domain_name and stage:
+                _websocket_endpoint = f"https://{domain_name}/{stage}"
+                logger.info(f"Cached WebSocket endpoint: {_websocket_endpoint}")
+        
+        route_key = request_context.get('routeKey')
+        connection_id = request_context.get('connectionId')
         
         if route_key == '$connect':
             return handle_connect(connection_id, event)
@@ -53,10 +67,6 @@ def handle_connect(connection_id, event):
     """Handle WebSocket connection."""
     try:
         logger.info(f"Connection established: {connection_id}")
-        
-        # Don't send welcome message immediately - wait for client to send first message
-        # The connection might not be fully ready yet
-        
         return {'statusCode': 200}
     except Exception as e:
         logger.error(f"Connect error: {str(e)}")
@@ -146,14 +156,39 @@ def process_with_nova_pro(user_message: str, session_id: str, has_image: bool = 
         
         # If it's a workflow, return workflow response
         if result.get('type') in ['workflow', 'workflow_complete']:
+            response_content = result.get('response', '')
+            # Convert AgentResult to string if needed
+            if hasattr(response_content, 'content'):
+                response_content = str(response_content.content)
+            elif not isinstance(response_content, str):
+                response_content = str(response_content)
+            
+            # Add quick replies for incident confirmation and remove option text
+            quick_replies = None
+            if 'confirm you would like to report an incident' in response_content.lower():
+                quick_replies = ['Yes, report an incident', 'Not an incident (Service Complaint / Feedback)']
+                # Keep only the question, remove everything after it
+                if 'Image detected.' in response_content:
+                    response_content = 'Image detected. Can you confirm you would like to report an incident?'
+                else:
+                    # Find the question and keep only that
+                    lines = response_content.split('\n')
+                    for i, line in enumerate(lines):
+                        if 'confirm you would like to report an incident' in line.lower():
+                            response_content = '\n'.join(lines[:i+1]).strip()
+                            break
+            elif 'blocking the road' in response_content.lower() or 'causing hazard' in response_content.lower():
+                quick_replies = ['Yes', 'No']
+            
             return {
                 'type': 'assistant_message',
-                'content': result.get('response', ''),
+                'content': response_content,
                 'sessionId': session_id,
                 'timestamp': datetime.utcnow().isoformat(),
                 'provider': 'mbpp-workflow',
                 'workflowType': result.get('workflow_type'),
-                'workflowId': result.get('workflow_id')
+                'workflowId': result.get('workflow_id'),
+                'quickReplies': quick_replies
             }
         
         # Otherwise use Nova Pro engine
@@ -224,24 +259,34 @@ def process_with_nova_pro(user_message: str, session_id: str, has_image: bool = 
 
 def send_message_to_connection(connection_id, message):
     """Send message to WebSocket connection."""
+    global _websocket_endpoint
+    
     try:
-        # Get the API Gateway endpoint
-        domain_name = os.environ.get('WEBSOCKET_DOMAIN_NAME', 'ynw017q5lc.execute-api.ap-southeast-1.amazonaws.com')
-        stage = os.environ.get('WEBSOCKET_STAGE', 'prod')
+        # Use cached endpoint from event context
+        endpoint_url = _websocket_endpoint
         
-        endpoint_url = f"https://{domain_name}/{stage}"
+        if not endpoint_url:
+            # Fallback to environment variables
+            domain_name = os.environ.get('WEBSOCKET_DOMAIN_NAME')
+            stage = os.environ.get('WEBSOCKET_STAGE', 'prod')
+            if domain_name:
+                endpoint_url = f"https://{domain_name}/{stage}"
+            else:
+                raise ValueError("WebSocket endpoint not available")
         
         apigateway_client = boto3.client(
             'apigatewaymanagementapi',
             endpoint_url=endpoint_url
         )
         
+        logger.info(f"Sending to {endpoint_url} for connection {connection_id}")
+        
         apigateway_client.post_to_connection(
             ConnectionId=connection_id,
             Data=json.dumps(message)
         )
         
-        logger.info(f"Message sent to connection {connection_id}")
+        logger.info(f"Message sent successfully")
         
     except Exception as e:
         logger.error(f"Failed to send message to {connection_id}: {str(e)}")
