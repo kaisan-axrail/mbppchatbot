@@ -135,10 +135,15 @@ class MBPPWorkflowManager:
             if ticket.get('image_url'):
                 item['image_url'] = ticket['image_url']
             
+            print(f"Saving to DynamoDB table: {self.reports_table.table_name}")
+            print(f"Item to save: {item}")
             self.reports_table.put_item(Item=item)
+            print(f"Successfully saved ticket {ticket['ticket_number']} to DynamoDB")
             return True
         except Exception as e:
-            print(f"Error saving report: {e}")
+            print(f"Error saving report to DynamoDB: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def _create_event(self, event_type: str, ticket_number: str, data: Dict[str, Any]) -> bool:

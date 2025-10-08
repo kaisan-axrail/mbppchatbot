@@ -300,19 +300,19 @@ If they provided description, extract it and ask for location. If they provided 
             from strands_tools.mbpp_workflows import MBPPWorkflowManager
             manager = MBPPWorkflowManager()
             classification = manager.classify_incident(collected_data['description'])
-            ticket_number = manager._generate_ticket_number()
             
             preview = (
                 "Please confirm these details:\n\n"
-                f"Ticket #: {ticket_number}\n"
-                f"Description: {collected_data['description']}\n"
-                f"Location: {collected_data['location']}\n"
-                f"Category: {classification['category']} - {classification['sub_category']}\n"
-                f"Blocking Road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                f"Subject: Incident Report\n"
+                f"Details: {collected_data['description']}\n"
+                f"Feedback: {classification['feedback']}\n"
+                f"Category: {classification['category']}\n"
+                f"Sub-category: {classification['sub_category']}\n"
+                f"Blocked road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n"
+                f"Location: {collected_data['location']}\n\n"
                 "Is this correct?"
             )
             
-            collected_data['preview_ticket'] = ticket_number
             collected_data['preview_classification'] = classification
             return {
                 "type": "workflow",
@@ -339,7 +339,7 @@ If they provided description, extract it and ask for location. If they provided 
             from strands_tools.mbpp_workflows import MBPPWorkflowManager
             manager = MBPPWorkflowManager()
             
-            ticket_number = collected_data['preview_ticket']
+            ticket_number = manager._generate_ticket_number()
             classification = collected_data['preview_classification']
             
             ticket = {
@@ -355,6 +355,8 @@ If they provided description, extract it and ask for location. If they provided 
             }
             
             # Save ticket to DynamoDB
+            print(f"Attempting to save ticket: {ticket}")
+            print(f"Reports table: {os.environ.get('REPORTS_TABLE', 'mbpp-reports')}")
             save_success = manager._save_report(ticket)
             print(f"Ticket save result: {save_success}, ticket_number: {ticket_number}")
             
