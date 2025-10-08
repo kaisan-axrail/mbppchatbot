@@ -177,7 +177,10 @@ def process_with_nova_pro(user_message: str, session_id: str, has_image: bool = 
                         if 'confirm you would like to report an incident' in line.lower():
                             response_content = '\n'.join(lines[:i+1]).strip()
                             break
-            elif 'blocking the road' in response_content.lower() or 'causing hazard' in response_content.lower():
+            elif '?' in response_content and any(word in response_content.lower() for word in ['blocking', 'danger', 'hazard', 'injured', 'access', 'causing', 'immediate']):
+                # Any yes/no question about hazard/danger
+                quick_replies = ['Yes', 'No']
+            elif 'is this correct' in response_content.lower() or 'confirm these details' in response_content.lower():
                 quick_replies = ['Yes', 'No']
             
             return {

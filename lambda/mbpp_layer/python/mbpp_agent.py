@@ -130,7 +130,7 @@ class MBPPAgent:
         self.active_workflows[session_id] = {
             "workflow_id": workflow_id,
             "workflow_type": workflow_type,
-            "current_step": 1,
+            "current_step": 0 if has_image else 1,
             "data": {
                 "initial_message": message,
                 "has_image": has_image,
@@ -138,18 +138,28 @@ class MBPPAgent:
             }
         }
         
-        # Use AI to start workflow intelligently
+        # For image uploads, ask for incident confirmation first
+        if has_image:
+            return {
+                "type": "workflow",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": "Image detected. Can you confirm you would like to report an incident?",
+                "session_id": session_id
+            }
+        
+        # Use AI to start workflow intelligently for text
         prompt = f"""You are helping a user report an incident. The user said: "{message}"
 
 You need to collect:
 1. Description of what happened
 2. Location
-3. A contextual yes/no question about immediate danger/hazard (e.g., "Is it blocking the road?", "Is anyone injured?", "Is it causing danger?")
+3. A contextual yes/no question about immediate danger/hazard
 
 Analyze the user's message and respond with ONLY a JSON:
-{{"has_description": true/false, "has_location": true/false, "description": "extracted description or empty", "location": "extracted location or empty", "next_question": "what to ask next"}}
+{{"has_description": true/false, "has_location": true/false, "next_question": "what to ask next"}}
 
-If they provided description, ask for location. If they provided both, generate a contextual hazard question based on the incident type. If neither, ask for description."""
+If they provided description, extract it and ask for location. If they provided both, extract both and ask contextual hazard question. If neither, ask for description."""
         
         try:
             response = self.bedrock_runtime.invoke_model(
@@ -163,13 +173,28 @@ If they provided description, ask for location. If they provided both, generate 
             result = json.loads(response['body'].read())
             ai_response = json.loads(result['content'][0]['text'])
             
-            # Update workflow data based on AI extraction
+            # Update workflow data - store actual message as description
             if ai_response.get('has_description'):
-                self.active_workflows[session_id]['data']['description'] = ai_response.get('description')
+                self.active_workflows[session_id]['data']['description'] = message
                 self.active_workflows[session_id]['current_step'] = 2
             
             if ai_response.get('has_location'):
-                self.active_workflows[session_id]['data']['location'] = ai_response.get('location')
+                # Extract location from message using AI
+                try:
+                    loc_prompt = f'Extract ONLY the location from: "{message}". Return just the location text, nothing else.'
+                    loc_response = self.bedrock_runtime.invoke_model(
+                        modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                        body=json.dumps({
+                            "anthropic_version": "bedrock-2023-05-31",
+                            "max_tokens": 100,
+                            "messages": [{"role": "user", "content": loc_prompt}]
+                        })
+                    )
+                    loc_result = json.loads(loc_response['body'].read())
+                    location = loc_result['content'][0]['text'].strip()
+                    self.active_workflows[session_id]['data']['location'] = location
+                except:
+                    self.active_workflows[session_id]['data']['location'] = message
                 self.active_workflows[session_id]['current_step'] = 3
             
             response_text = ai_response.get('next_question', 'Please describe what happened.')
@@ -200,8 +225,30 @@ If they provided description, ask for location. If they provided both, generate 
         workflow_type = workflow_context["workflow_type"]
         current_step = workflow_context["current_step"]
         
-        # Use AI to understand user response and determine next step
+        # Handle image incident confirmation (step 0)
         collected_data = workflow_context["data"]
+        if current_step == 0 and collected_data.get('has_image'):
+            if 'yes' in message.lower() and 'incident' in message.lower():
+                workflow_context['current_step'] = 1
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "Please describe what happened and tell us the location.",
+                    "session_id": session_id
+                }
+            else:
+                # User selected service complaint
+                del self.active_workflows[session_id]
+                return {
+                    "type": "workflow",
+                    "workflow_type": "complaint",
+                    "workflow_id": workflow_id,
+                    "response": "Please describe the service issue or feedback.",
+                    "session_id": session_id
+                }
+        
+        # Use AI to understand user response and determine next step
         prompt = f"""You are helping collect incident report information.
 
 Collected so far:
@@ -233,17 +280,17 @@ Rules:
             result = json.loads(response['body'].read())
             ai_response = json.loads(result['content'][0]['text'])
             
-            # Update workflow data
+            # Update workflow data - store the actual user message
             field = ai_response.get('field')
             value = ai_response.get('value')
             next_step = ai_response.get('next_step')
             
             if field == 'description':
-                workflow_context['data']['description'] = value
+                workflow_context['data']['description'] = message  # Store actual message
             elif field == 'location':
-                workflow_context['data']['location'] = value
+                workflow_context['data']['location'] = message  # Store actual message
             elif field == 'hazard':
-                workflow_context['data']['hazard_confirmation'] = 'yes' in value.lower()
+                workflow_context['data']['hazard_confirmation'] = 'yes' in message.lower()
             elif field == 'confirmation':
                 if 'no' in value.lower():
                     # Restart
