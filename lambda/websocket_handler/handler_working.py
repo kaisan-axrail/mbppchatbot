@@ -145,8 +145,8 @@ def handle_conversation_update(connection_id, event):
 def process_with_nova_pro(user_message: str, session_id: str, has_image: bool = False, image_data: str = None) -> dict:
     """Process message using MBPP Workflow Agent or Nova Pro chatbot engine."""
     try:
-        # Check if this is a workflow trigger
-        mbpp_agent = MBPPAgent()
+        # Check if this is a workflow trigger - pass session_id for persistence
+        mbpp_agent = MBPPAgent(session_id=session_id)
         result = mbpp_agent.process_message(
             message=user_message,
             session_id=session_id,

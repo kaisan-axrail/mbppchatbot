@@ -12,7 +12,6 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 from strands import Agent
-from strands.session.s3_session_manager import S3SessionManager
 from strands_tools import workflow
 from strands_tools.mbpp_workflows import mbpp_workflow
 import boto3
@@ -27,17 +26,12 @@ class MBPPAgent:
             region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
         )
         
-        # Create session manager for persistence
-        self.session_manager = None
-        if session_id:
-            self.session_manager = S3SessionManager(
-                session_id=session_id,
-                bucket=os.environ.get('SESSION_BUCKET', 'mbpp-chatbot-sessions'),
-                prefix='workflows/',
-                region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
-            )
+        # Initialize DynamoDB for workflow state persistence
+        self.dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+        self.sessions_table = self.dynamodb.Table(os.environ.get('SESSIONS_TABLE', 'mbpp-sessions'))
+        self.session_id = session_id
         
-        # Create specialized agents with session management
+        # Create specialized agents
         self.workflow_agent = Agent(
             system_prompt="""You are an MBPP incident and complaint management assistant. Communicate ONLY in English.
             
@@ -54,8 +48,7 @@ class MBPPAgent:
             
             Always communicate in English. Be polite, clear, and guide users step-by-step.""",
             tools=[mbpp_workflow],
-            model="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            session_manager=self.session_manager
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
         self.rag_agent = Agent(
@@ -63,15 +56,11 @@ class MBPPAgent:
             Help users find information from MBPP documents and answer general questions.
             Provide accurate, helpful responses in English only.
             If you don't know something, say so clearly.""",
-            model="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            session_manager=self.session_manager
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
-        # Track active workflows in agent state (persisted via session manager)
-        if self.session_manager:
-            self.active_workflows = self.workflow_agent.state.get('active_workflows', {})
-        else:
-            self.active_workflows = {}
+        # Load workflow state from DynamoDB
+        self.active_workflows = self._load_workflow_state(session_id) if session_id else {}
     
     def process_message(
         self,
@@ -94,16 +83,10 @@ class MBPPAgent:
         Returns:
             Response dictionary
         """
-        # Restore workflow state from agent state
-        if self.session_manager:
-            self.active_workflows = self.workflow_agent.state.get('active_workflows', {})
-        
         # Check if there's an active workflow for this session
         if session_id in self.active_workflows:
             result = self._continue_workflow(session_id, message, has_image, image_data, location)
-            # Persist workflow state
-            if self.session_manager:
-                self.workflow_agent.state['active_workflows'] = self.active_workflows
+            self._save_workflow_state(session_id)
             return result
         
         # Detect if this is a workflow trigger or RAG question
@@ -111,9 +94,7 @@ class MBPPAgent:
         
         if workflow_type in ["complaint", "text_incident", "image_incident"]:
             result = self._start_workflow(session_id, workflow_type, message, has_image, image_data)
-            # Persist workflow state
-            if self.session_manager:
-                self.workflow_agent.state['active_workflows'] = self.active_workflows
+            self._save_workflow_state(session_id)
             return result
         else:
             return self._handle_rag_query(message, session_id)
@@ -377,6 +358,7 @@ Is this correct?"""
             manager._create_event('incident_created', ticket_number, collected_data)
             
             del self.active_workflows[session_id]
+            self._save_workflow_state(session_id)
             return {
                 "type": "workflow_complete",
                 "workflow_type": workflow_type,
@@ -553,8 +535,38 @@ relevant information, say so clearly."""
         """Cancel an active workflow"""
         if session_id in self.active_workflows:
             del self.active_workflows[session_id]
+            self._save_workflow_state(session_id)
             return True
         return False
+    
+    def _save_workflow_state(self, session_id: str) -> None:
+        """Save workflow state to DynamoDB (fast: 5-20ms)"""
+        if not session_id:
+            return
+        try:
+            workflow_state = self.active_workflows.get(session_id, {})
+            self.sessions_table.update_item(
+                Key={'sessionId': session_id},
+                UpdateExpression='SET workflowState = :state, updatedAt = :updated',
+                ExpressionAttributeValues={
+                    ':state': workflow_state,
+                    ':updated': datetime.now().isoformat()
+                }
+            )
+        except Exception as e:
+            print(f"Failed to save workflow state: {e}")
+    
+    def _load_workflow_state(self, session_id: str) -> dict:
+        """Load workflow state from DynamoDB (fast: 1-10ms)"""
+        if not session_id:
+            return {}
+        try:
+            response = self.sessions_table.get_item(Key={'sessionId': session_id})
+            item = response.get('Item', {})
+            return {session_id: item.get('workflowState', {})} if item.get('workflowState') else {}
+        except Exception as e:
+            print(f"Failed to load workflow state: {e}")
+            return {}
 
 
 # Lambda handler integration
