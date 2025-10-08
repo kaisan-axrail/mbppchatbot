@@ -55,11 +55,17 @@ class MBPPAgent:
         from strands_tools import retrieve
         
         self.rag_agent = Agent(
-            system_prompt="""You are an MBPP knowledge assistant. Communicate ONLY in English.
-            Help users find information from MBPP documents and answer general questions.
-            Use the retrieve tool to search the knowledge base when users ask questions.
-            Provide accurate, helpful responses in English only.
-            If you don't know something, say so clearly.""",
+            system_prompt="""You are an MBPP (Majlis Bandaraya Pulau Pinang) knowledge assistant. Communicate ONLY in English.
+            
+            IMPORTANT: For ANY question the user asks, ALWAYS use the retrieve tool to search the knowledge base first.
+            The knowledge base contains information about MBPP services, events, programs, policies, and general information.
+            
+            Steps for every question:
+            1. Use retrieve tool to search the knowledge base
+            2. If relevant information is found, provide a clear answer based on the retrieved content
+            3. If no relevant information is found, politely inform the user that the information is not available in the knowledge base
+            
+            Provide accurate, helpful responses in English only.""",
             tools=[retrieve],
             model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
@@ -116,7 +122,7 @@ class MBPPAgent:
         service_keywords = ['website', 'system', 'service', 'portal', 'online', 'app', 'down', 'not working', 'cannot access']
         
         # Physical incident keywords
-        incident_keywords = ['fallen tree', 'pothole', 'flood', 'accident', 'blocking', 'hazard', 'emergency']
+        incident_keywords = ['report incident', 'report an incident', 'fallen tree', 'pothole', 'flood', 'accident', 'blocking', 'hazard', 'emergency', 'incident']
         
         has_service_issue = any(keyword in message_lower for keyword in service_keywords)
         has_incident = any(keyword in message_lower for keyword in incident_keywords)
@@ -215,7 +221,7 @@ If they provided description, extract it and ask for location. If they provided 
             
         except Exception as e:
             print(f"AI extraction error: {e}")
-            response_text = "Please describe what happened."
+            response_text = "Please share an image of the incident, the location and describe what happened. You may also share your location to make it easier.\n\n(e.g. I would like to complain about a pothole at Jalan Penang, 10000, Georgetown)"
         
         return {
             "type": "workflow",
