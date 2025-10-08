@@ -10,6 +10,7 @@ Handles:
 import os
 import json
 from typing import Dict, Any, Optional
+from datetime import datetime
 from strands import Agent
 from strands_tools import workflow
 from strands_tools.mbpp_workflows import mbpp_workflow
@@ -248,126 +249,113 @@ If they provided description, extract it and ask for location. If they provided 
                     "session_id": session_id
                 }
         
-        # Use AI to understand user response and determine next step
-        prompt = f"""You are helping collect incident report information.
-
-Collected so far:
-- Description: {collected_data.get('description', 'NOT YET')}
-- Location: {collected_data.get('location', 'NOT YET')}
-- Hazard: {collected_data.get('hazard_confirmation', 'NOT YET')}
-
-User just said: "{message}"
-
-Determine what field the user is providing:
-- If we don't have description yet, they're providing description
-- If we have description but not location, they're providing location
-- If we have both but not hazard answer, they're answering hazard question
-- If we have all three, they're confirming the ticket
-
-Respond with ONLY JSON:
-{{"field": "description/location/hazard/confirmation", "next_step": "ask_location/ask_hazard/show_preview/save_ticket", "next_question": "what to ask next"}}
-
-For hazard question, generate contextual question based on description (e.g., fallen tree -> "Is it blocking the road?")."""
-        
-        try:
-            response = self.bedrock_runtime.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 400,
-                    "messages": [{"role": "user", "content": prompt}]
-                })
-            )
-            result = json.loads(response['body'].read())
-            ai_response = json.loads(result['content'][0]['text'])
+        # Update workflow data based on what field user is providing
+        if 'description' not in collected_data:
+            collected_data['description'] = message
+            workflow_context['current_step'] = 2
+            return {
+                "type": "workflow",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": "What is the exact location?",
+                "session_id": session_id
+            }
+        elif 'location' not in collected_data:
+            collected_data['location'] = message
+            workflow_context['current_step'] = 3
             
-            # Update workflow data based on what field user is providing
-            field = ai_response.get('field')
-            next_step = ai_response.get('next_step')
+            # Generate contextual hazard question
+            desc = collected_data['description'].lower()
+            if 'tree' in desc or 'fallen' in desc:
+                hazard_q = "Is the fallen tree blocking the road?"
+            elif 'pothole' in desc:
+                hazard_q = "Is the pothole causing traffic issues?"
+            elif 'flood' in desc:
+                hazard_q = "Is the flooding blocking access?"
+            else:
+                hazard_q = "Is this causing immediate danger or blocking access?"
             
-            if field == 'description':
-                workflow_context['data']['description'] = message
-            elif field == 'location':
-                workflow_context['data']['location'] = message
-            elif field == 'hazard':
-                workflow_context['data']['hazard_confirmation'] = 'yes' in message.lower()
-            elif field == 'confirmation':
-                if 'no' in message.lower():
-                    # Restart
-                    workflow_context['current_step'] = 1
-                    workflow_context['data'] = {}
-                    return {
-                        "type": "workflow",
-                        "workflow_type": workflow_type,
-                        "workflow_id": workflow_id,
-                        "response": "Let's start over. Please describe what happened.",
-                        "session_id": session_id
-                    }
+            return {
+                "type": "workflow",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": hazard_q,
+                "session_id": session_id,
+                "quick_replies": ["Yes", "No"]
+            }
+        elif 'hazard_confirmation' not in collected_data:
+            collected_data['hazard_confirmation'] = 'yes' in message.lower()
+            workflow_context['current_step'] = 4
             
-            # Handle completion
-            if next_step == 'complete':
-                # Save ticket
-                from strands_tools.mbpp_workflows import MBPPWorkflowManager
-                manager = MBPPWorkflowManager()
-                classification = manager.classify_incident(workflow_context['data']['description'])
-                
-                ticket_number = manager._generate_ticket_number()
-                ticket = {
-                    "ticket_number": ticket_number,
-                    "subject": "Incident Report",
-                    "details": workflow_context['data']['description'],
-                    "location": workflow_context['data']['location'],
-                    "feedback": classification["feedback"],
-                    "category": classification["category"],
-                    "sub_category": classification["sub_category"],
-                    "blocked_road": workflow_context['data'].get('hazard_confirmation', False),
-                    "created_at": datetime.now().isoformat()
-                }
-                
-                manager._save_report(ticket)
-                manager._create_event('incident_created', ticket_number, workflow_context['data'])
-                
-                del self.active_workflows[session_id]
-                return {
-                    "type": "workflow_complete",
-                    "workflow_type": workflow_type,
-                    "workflow_id": workflow_id,
-                    "response": f"Thank you for your submission! Your reference number is {ticket_number}",
-                    "session_id": session_id
-                }
+            # Show preview
+            from strands_tools.mbpp_workflows import MBPPWorkflowManager
+            manager = MBPPWorkflowManager()
+            classification = manager.classify_incident(collected_data['description'])
+            ticket_number = manager._generate_ticket_number()
             
-            # Handle ticket preview
-            if next_step == 'confirm':
-                from strands_tools.mbpp_workflows import MBPPWorkflowManager
-                manager = MBPPWorkflowManager()
-                classification = manager.classify_incident(workflow_context['data']['description'])
-                ticket_number = manager._generate_ticket_number()
-                
-                preview = f"""Please confirm these details:
+            preview = f"""Please confirm these details:
 
 Ticket #: {ticket_number}
-Description: {workflow_context['data']['description']}
-Location: {workflow_context['data']['location']}
+Description: {collected_data['description']}
+Location: {collected_data['location']}
 Category: {classification['category']} - {classification['sub_category']}
-Blocking Road: {'Yes' if workflow_context['data'].get('hazard_confirmation') else 'No'}
+Blocking Road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}
 
-Is this correct? (Yes/No)"""
-                
-                workflow_context['data']['preview_ticket'] = ticket_number
+Is this correct?"""
+            
+            collected_data['preview_ticket'] = ticket_number
+            collected_data['preview_classification'] = classification
+            return {
+                "type": "workflow",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": preview,
+                "session_id": session_id,
+                "quick_replies": ["Yes, submit", "No, start over"]
+            }
+        else:
+            # Final confirmation
+            if 'no' in message.lower():
+                workflow_context['current_step'] = 1
+                workflow_context['data'] = {}
                 return {
                     "type": "workflow",
                     "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
-                    "response": preview,
+                    "response": "Let's start over. Please describe what happened.",
                     "session_id": session_id
                 }
             
-            response_text = ai_response.get('next_question', '')
-            workflow_context["current_step"] += 1
+            # Save ticket
+            from strands_tools.mbpp_workflows import MBPPWorkflowManager
+            manager = MBPPWorkflowManager()
             
-        except Exception as e:
-            print(f"AI workflow error: {e}")
-            response_text = "Could you please provide more details?"
+            ticket_number = collected_data['preview_ticket']
+            classification = collected_data['preview_classification']
+            
+            ticket = {
+                "ticket_number": ticket_number,
+                "subject": "Incident Report",
+                "details": collected_data['description'],
+                "location": collected_data['location'],
+                "feedback": classification["feedback"],
+                "category": classification["category"],
+                "sub_category": classification["sub_category"],
+                "blocked_road": collected_data.get('hazard_confirmation', False),
+                "created_at": datetime.now().isoformat()
+            }
+            
+            manager._save_report(ticket)
+            manager._create_event('incident_created', ticket_number, collected_data)
+            
+            del self.active_workflows[session_id]
+            return {
+                "type": "workflow_complete",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": f"Thank you for your submission! Your reference number is {ticket_number}",
+                "session_id": session_id
+            }
         
         return {
             "type": "workflow",
