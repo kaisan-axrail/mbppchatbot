@@ -83,8 +83,9 @@ class LambdaStack(Stack):
                                 f"{self.sessions_table.table_arn}/index/*",
                                 f"{self.conversations_table.table_arn}/index/*",
                                 f"{self.analytics_table.table_arn}/index/*",
-                                # Add websocket-connections table access
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-websocket-connections"
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-websocket-connections",
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-reports",
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-events"
                             ]
                         )
                     ]
