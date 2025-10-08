@@ -138,40 +138,8 @@ class MCPChatbotServer:
                         })
             self.logger.info(f"Loaded {len(tools)} tools from OpenAPI schema: {[t['name'] for t in tools]}")
         else:
-            self.logger.warning("OpenAPI schema not available, using fallback tool definitions")
-            # Fallback tool definitions with proper schemas
-            tools = [
-                {
-                    'name': 'list_events',
-                    'description': 'List all events from the database. Use this to find events by name or see all available events.',
-                    'parameters': {}
-                },
-                {
-                    'name': 'search_documents',
-                    'description': 'Search documents using vector similarity for RAG queries',
-                    'parameters': {'query': 'string', 'limit': 'integer', 'threshold': 'float'}
-                },
-                {
-                    'name': 'create_event',
-                    'description': 'Create a new event in the database',
-                    'parameters': {'data': 'object'}
-                },
-                {
-                    'name': 'read_event',
-                    'description': 'Read a specific event by ID',
-                    'parameters': {'record_id': 'string'}
-                },
-                {
-                    'name': 'update_event',
-                    'description': 'Update an existing event',
-                    'parameters': {'record_id': 'string', 'data': 'object'}
-                },
-                {
-                    'name': 'delete_event',
-                    'description': 'Delete an event from the database',
-                    'parameters': {'record_id': 'string'}
-                }
-            ]
+            self.logger.warning("OpenAPI schema not available, no fallback tools defined")
+            tools = []
             self.logger.info(f"Loaded {len(tools)} fallback tools: {[t['name'] for t in tools]}")
         
         return tools
@@ -216,93 +184,12 @@ class MCPChatbotServer:
             if 'kwargs' in parameters and isinstance(parameters['kwargs'], str):
                 parameters = json.loads(parameters['kwargs'])
             
-            if tool_name == 'search_documents':
-                return await self.search_documents(**parameters)
-            else:
-                raise MCPServerError(f"Unknown tool: {tool_name}")
+            raise MCPServerError(f"Unknown tool: {tool_name}")
         except Exception as e:
             self.logger.error(f"Tool execution failed: {str(e)}")
             raise MCPServerError(f"Tool execution failed: {str(e)}")
     
-    async def search_documents(self, query: str, limit: int = 5, threshold: float = 0.6) -> Dict[str, Any]:
-        """
-        Search documents using both Bedrock Knowledge Bases.
-        
-        Args:
-            query: Search query text
-            limit: Maximum number of results per knowledge base
-            threshold: Minimum similarity score
-            
-        Returns:
-            Combined search results from both knowledge bases
-        """
-        self.logger.info(f"Searching knowledge bases for query: {query}")
-        
-        try:
-            # Get knowledge base IDs from environment
-            kb_ids = [
-                'U6EAI0DHJC',  # mbpp-faq-knowledgebase
-                'CTFE3RJR01'   # mbpp-knowledgebase-url
-            ]
-            
-            # Initialize Bedrock Agent Runtime client
-            bedrock_agent = boto3.client('bedrock-agent-runtime')
-            
-            all_results = []
-            
-            # Query each knowledge base
-            for kb_id in kb_ids:
-                try:
-                    response = bedrock_agent.retrieve(
-                        knowledgeBaseId=kb_id,
-                        retrievalQuery={'text': query},
-                        retrievalConfiguration={
-                            'vectorSearchConfiguration': {
-                                'numberOfResults': limit
-                            }
-                        }
-                    )
-                    
-                    # Format results
-                    for item in response.get('retrievalResults', []):
-                        score = item.get('score', 0.0)
-                        if score >= threshold:
-                            all_results.append({
-                                'content': item.get('content', {}).get('text', ''),
-                                'score': float(score),
-                                'source': item.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
-                                'knowledge_base': kb_id,
-                                'metadata': item.get('metadata', {})
-                            })
-                    
-                    self.logger.info(f"Found {len(response.get('retrievalResults', []))} results from KB {kb_id}")
-                    
-                except Exception as kb_error:
-                    self.logger.error(f"Error querying KB {kb_id}: {str(kb_error)}")
-                    continue
-            
-            # Sort by score and limit total results
-            all_results.sort(key=lambda x: x['score'], reverse=True)
-            all_results = all_results[:limit * 2]  # Return up to 2x limit from both KBs
-            
-            self.logger.info(f"Found {len(all_results)} total documents from both knowledge bases")
-            
-            return {
-                "success": True,
-                "results": all_results,
-                "query": query,
-                "total_results": len(all_results)
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Error searching knowledge bases: {str(e)}")
-            return {
-                "success": False,
-                "results": [],
-                "query": query,
-                "total_results": 0,
-                "error": str(e)
-            }
+
     
     async def create_record(self, table: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -51,11 +51,16 @@ class MBPPAgent:
             model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
+        # Import Strands retrieve tool for RAG
+        from strands_tools import retrieve
+        
         self.rag_agent = Agent(
             system_prompt="""You are an MBPP knowledge assistant. Communicate ONLY in English.
             Help users find information from MBPP documents and answer general questions.
+            Use the retrieve tool to search the knowledge base when users ask questions.
             Provide accurate, helpful responses in English only.
             If you don't know something, say so clearly.""",
+            tools=[retrieve],
             model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
         
@@ -347,6 +352,25 @@ If they provided description, extract it and ask for location. If they provided 
         # Update workflow data based on what field user is providing
         if 'description' not in collected_data:
             collected_data['description'] = message
+            
+            # Check if image was provided - switch to image_incident workflow
+            if has_image and image_data:
+                collected_data['image_data'] = image_data
+                collected_data['has_image'] = True
+                workflow_context['workflow_type'] = 'image_incident'
+                workflow_context['current_step'] = 0
+                return {
+                    "type": "workflow",
+                    "workflow_type": "image_incident",
+                    "workflow_id": workflow_id,
+                    "response": "Image detected. Can you confirm you would like to report an incident?",
+                    "session_id": session_id,
+                    "quick_replies": [
+                        {"text": "Yes, report an incident", "value": "yes_incident"},
+                        {"text": "Not an incident (Service Complaint / Feedback)", "value": "no_complaint"}
+                    ]
+                }
+            
             workflow_context['current_step'] = 2
             return {
                 "type": "workflow",
@@ -443,6 +467,16 @@ If they provided description, extract it and ask for location. If they provided 
                 "created_at": datetime.now().isoformat()
             }
             
+            # Save image to S3 if present
+            if collected_data.get('image_data'):
+                print(f"Saving image to S3 for ticket: {ticket_number}")
+                image_url = manager._save_image(collected_data['image_data'], ticket_number)
+                if image_url:
+                    ticket['image_url'] = image_url
+                    print(f"Image saved to S3: {image_url}")
+                else:
+                    print(f"Failed to save image to S3")
+            
             # Save ticket to DynamoDB
             print(f"Attempting to save ticket: {ticket}")
             print(f"Reports table: {os.environ.get('REPORTS_TABLE', 'mbpp-reports')}")
@@ -536,29 +570,14 @@ If location is not mentioned, use empty string for location."""
         return data
     
     def _handle_rag_query(self, message: str, session_id: str) -> Dict[str, Any]:
-        """Handle RAG-based question answering"""
-        # Check if we need to search knowledge base
-        if self._needs_knowledge_base(message):
-            # Perform vector search
-            search_results = self._search_knowledge_base(message)
-            
-            # Build context with search results
-            context = self._build_rag_context(search_results)
-            
-            prompt = f"""Answer the following question using the provided context.
-            
-Context:
-{context}
-
-Question: {message}
-
-Provide a clear, accurate answer based on the context. If the context doesn't contain
-relevant information, say so clearly."""
-            
-            response = self.rag_agent(prompt)
-        else:
-            # Direct question without knowledge base
-            response = self.rag_agent(message)
+        """Handle RAG-based question answering using Strands retrieve tool"""
+        # Set environment variables for retrieve tool
+        os.environ['KNOWLEDGE_BASE_ID'] = 'U6EAI0DHJC'  # Primary KB
+        os.environ['AWS_REGION'] = os.environ.get('BEDROCK_REGION', 'us-east-1')
+        os.environ['MIN_SCORE'] = '0.6'
+        
+        # Let the agent use retrieve tool automatically
+        response = self.rag_agent(message)
         
         return {
             "type": "rag",
@@ -566,64 +585,7 @@ relevant information, say so clearly."""
             "session_id": session_id
         }
     
-    def _needs_knowledge_base(self, message: str) -> bool:
-        """Determine if query needs knowledge base search"""
-        # Simple heuristic - can be enhanced
-        question_words = ['what', 'how', 'when', 'where', 'who', 'why', 'which']
-        message_lower = message.lower()
-        return any(word in message_lower for word in question_words)
-    
-    def _search_knowledge_base(self, query: str) -> list:
-        """Search Bedrock Knowledge Base"""
-        try:
-            kb_ids = ['U6EAI0DHJC', 'CTFE3RJR01']
-            all_results = []
-            
-            bedrock_agent = boto3.client(
-                'bedrock-agent-runtime',
-                region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
-            )
-            
-            for kb_id in kb_ids:
-                try:
-                    response = bedrock_agent.retrieve(
-                        knowledgeBaseId=kb_id,
-                        retrievalQuery={'text': query},
-                        retrievalConfiguration={
-                            'vectorSearchConfiguration': {
-                                'numberOfResults': 3
-                            }
-                        }
-                    )
-                    
-                    for result in response.get('retrievalResults', []):
-                        all_results.append({
-                            'content': result.get('content', {}).get('text', ''),
-                            'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
-                            'score': result.get('score', 0.0)
-                        })
-                except Exception as kb_error:
-                    print(f"Failed to query KB {kb_id}: {kb_error}")
-            
-            # Sort by score and return top 5
-            all_results.sort(key=lambda x: x['score'], reverse=True)
-            return all_results[:5]
-        except Exception as e:
-            print(f"Knowledge base search error: {e}")
-            return []
-    
-    def _build_rag_context(self, search_results: list) -> str:
-        """Build context from search results"""
-        if not search_results:
-            return "No relevant information found in knowledge base."
-        
-        context_parts = []
-        for i, result in enumerate(search_results, 1):
-            context_parts.append(f"[Document {i}]")
-            context_parts.append(result.get('content', ''))
-            context_parts.append("")
-        
-        return "\n".join(context_parts)
+
     
     def get_workflow_status(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get status of active workflow for a session"""

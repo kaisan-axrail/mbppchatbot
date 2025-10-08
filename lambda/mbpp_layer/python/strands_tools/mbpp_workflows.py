@@ -235,13 +235,19 @@ class MBPPWorkflowManager:
     def text_incident_workflow(self, workflow_id: str, action: str, data: Dict[str, Any] = None) -> Dict[str, Any]:
         if action == "start":
             workflow = self.create_workflow("text_incident", workflow_id, data or {})
-            return {"status": "success", "step": 1, "message": "Please describe what happened.", "workflow_id": workflow_id}
+            return {"status": "success", "step": 1, "message": "Please share an image of the incident, the location and describe what happened. You may also share your location to make it easier.\n\n(e.g. I would like to complain about a pothole at Jalan Penang, 10000, Georgetown)", "workflow_id": workflow_id}
         
         elif action == "step2_submit_info":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 2
             workflow["data"]["description"] = data.get("description")
+            workflow["data"]["location"] = data.get("location")
             workflow["data"]["image"] = data.get("image")
+            
+            # If image is provided, switch to image_incident workflow
+            if workflow["data"].get("image"):
+                return {"status": "switch_workflow", "new_workflow_type": "image_incident", "message": "Image detected. Switching to image incident workflow.", "workflow_id": workflow_id}
+            
             return {"status": "success", "step": 2, "message": "Where is this? You can share your live location or type the address.", "workflow_id": workflow_id}
         
         elif action == "step3_confirm":

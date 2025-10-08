@@ -2,52 +2,10 @@ openapi: 3.0.0
 info:
   title: MCP Chatbot Tools API
   version: 1.0.0
-  description: MCP server tools for document search
+  description: MCP server for future custom tools
 
 servers:
   - url: https://4fsaarjly6.execute-api.ap-southeast-1.amazonaws.com/prod
     description: Production MCP API endpoint
 
-paths:
-  /search_documents:
-    post:
-      operationId: search_documents
-      summary: Search documents using vector similarity
-      description: Search documents for RAG queries using semantic search
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - query
-              properties:
-                query:
-                  type: string
-                  description: Search query text
-                limit:
-                  type: integer
-                  default: 5
-                  description: Maximum number of results
-                threshold:
-                  type: number
-                  format: float
-                  default: 0.7
-                  description: Minimum similarity score
-      responses:
-        '200':
-          description: Search results
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  results:
-                    type: array
-                    items:
-                      type: object
-                  total_results:
-                    type: integer
+paths: {}
