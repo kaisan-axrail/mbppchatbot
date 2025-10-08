@@ -267,21 +267,7 @@ Determine what field the user is providing:
 Respond with ONLY JSON:
 {{"field": "description/location/hazard/confirmation", "next_step": "ask_location/ask_hazard/show_preview/save_ticket", "next_question": "what to ask next"}}
 
-For hazard question, generate contextual question based on description (e.g., fallen tree -> "Is it blocking the road?")."""ption: {collected_data.get('description', 'NOT YET')}
-- Location: {collected_data.get('location', 'NOT YET')}
-- Hazard: {collected_data.get('hazard_confirmation', 'NOT YET')}
-
-User just said: "{message}"
-
-Respond with ONLY JSON:
-{{"field": "description/location/hazard/confirmation", "value": "extracted value", "next_step": "description/location/hazard/confirm/complete", "next_question": "what to ask next or empty if complete"}}
-
-Rules:
-- If missing description, next_step=description
-- If missing location, next_step=location
-- If missing hazard, next_step=hazard (generate contextual yes/no question based on incident type - e.g., for fallen tree ask "Is it blocking the road?", for pothole ask "Is it causing danger to vehicles?", for flood ask "Is access blocked?")
-- If all collected, next_step=confirm (show ticket preview)
-- If user confirms ticket, next_step=complete"""
+For hazard question, generate contextual question based on description (e.g., fallen tree -> "Is it blocking the road?")."""
         
         try:
             response = self.bedrock_runtime.invoke_model(
@@ -306,7 +292,7 @@ Rules:
             elif field == 'hazard':
                 workflow_context['data']['hazard_confirmation'] = 'yes' in message.lower()
             elif field == 'confirmation':
-                if 'no' in value.lower():
+                if 'no' in message.lower():
                     # Restart
                     workflow_context['current_step'] = 1
                     workflow_context['data'] = {}
