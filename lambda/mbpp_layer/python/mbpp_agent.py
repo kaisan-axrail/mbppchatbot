@@ -138,19 +138,17 @@ class MBPPAgent:
             }
         }
         
-        # Use workflow agent to start the workflow
-        prompt = f"""Start a {workflow_type} workflow.
-        User message: {message}
-        Has image: {has_image}
+        # Call workflow manager directly
+        result = mbpp_workflow(
+            action="start",
+            workflow_type=workflow_type,
+            workflow_id=workflow_id,
+            data={"image": image_data} if has_image else {},
+            message=message,
+            has_image=has_image
+        )
         
-        Use the mbpp_workflow tool to initiate the workflow."""
-        
-        try:
-            response = self.workflow_agent(prompt)
-            response_text = str(response.content) if hasattr(response, 'content') else str(response)
-        except Exception as e:
-            print(f"Workflow agent error: {e}")
-            response_text = f"Started {workflow_type} workflow. Please provide the required information."
+        response_text = result.get('message', 'Workflow started')
         
         return {
             "type": "workflow",
@@ -174,30 +172,26 @@ class MBPPAgent:
         workflow_type = workflow_context["workflow_type"]
         current_step = workflow_context["current_step"]
         
-        # Build context for the agent
-        prompt = f"""Continue the {workflow_type} workflow (ID: {workflow_id}).
-        Current step: {current_step}
-        User response: {message}
-        Has image: {has_image}
-        Location provided: {location is not None}
+        # Determine next action based on workflow type and step
+        action = self._get_workflow_action(workflow_type, current_step, message)
+        data = self._extract_workflow_data(workflow_type, current_step, message, workflow_context)
         
-        Use the mbpp_workflow tool to process this step and move to the next."""
+        # Call workflow manager directly
+        result = mbpp_workflow(
+            action=action,
+            workflow_type=workflow_type,
+            workflow_id=workflow_id,
+            data=data
+        )
         
-        try:
-            response = self.workflow_agent(prompt)
-            response_text = str(response.content) if hasattr(response, 'content') else str(response)
-        except Exception as e:
-            print(f"Workflow continuation error: {e}")
-            response_text = "Processing your response. Please continue."
-            response = response_text
+        response_text = result.get('message', '')
         
         # Update workflow context
         workflow_context["current_step"] += 1
         workflow_context["data"]["last_message"] = message
         
         # Check if workflow is completed
-        if "completed" in str(response_text).lower() or "ticket has been logged" in str(response_text).lower():
-            # Clean up completed workflow
+        if result.get('status') == 'success' and 'ticket_number' in result:
             del self.active_workflows[session_id]
             return {
                 "type": "workflow_complete",
@@ -214,6 +208,46 @@ class MBPPAgent:
             "response": response_text,
             "session_id": session_id
         }
+    
+    def _get_workflow_action(self, workflow_type: str, step: int, message: str) -> str:
+        """Determine workflow action based on type and step"""
+        if workflow_type == "text_incident":
+            if step == 1: return "step2_submit_info"
+            if step == 2: return "step3_confirm"
+            if step == 3: return "step4_location"
+            if step == 4: return "step5_hazard"
+            if step == 5: return "confirm"
+        elif workflow_type == "image_incident":
+            if step == 1: return "step2_describe"
+            if step == 2: return "step3_details"
+            if step == 3: return "step4_hazard"
+            if step == 4: return "confirm"
+        return "start"
+    
+    def _extract_workflow_data(self, workflow_type: str, step: int, message: str, context: dict) -> dict:
+        """Extract data from user message for workflow"""
+        data = {}
+        
+        if workflow_type == "text_incident":
+            if step == 1:
+                data = {"description": message, "image": context["data"].get("image_data")}
+            elif step == 2:
+                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
+            elif step == 3:
+                data = {"location": message}
+            elif step == 4:
+                data = {"hazard_confirmation": "yes" in message.lower()}
+        elif workflow_type == "image_incident":
+            if step == 1:
+                data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
+            elif step == 2:
+                # Extract description and location from message
+                parts = message.split(',')
+                data = {"description": parts[0].strip() if parts else message, "location": ','.join(parts[1:]).strip() if len(parts) > 1 else ""}
+            elif step == 3:
+                data = {"hazard_confirmation": "yes" in message.lower()}
+        
+        return data
     
     def _handle_rag_query(self, message: str, session_id: str) -> Dict[str, Any]:
         """Handle RAG-based question answering"""
@@ -254,17 +288,40 @@ relevant information, say so clearly."""
         return any(word in message_lower for word in question_words)
     
     def _search_knowledge_base(self, query: str) -> list:
-        """Search OpenSearch knowledge base"""
+        """Search Bedrock Knowledge Base"""
         try:
-            # Import vector search handler
-            from vector_search import search_documents
+            kb_ids = ['U6EAI0DHJC', 'CTFE3RJR01']
+            all_results = []
             
-            results = search_documents(
-                query=query,
-                index_name=os.environ.get('OPENSEARCH_INDEX', 'mbpp-documents'),
-                top_k=5
+            bedrock_agent = boto3.client(
+                'bedrock-agent-runtime',
+                region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
             )
-            return results
+            
+            for kb_id in kb_ids:
+                try:
+                    response = bedrock_agent.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={'text': query},
+                        retrievalConfiguration={
+                            'vectorSearchConfiguration': {
+                                'numberOfResults': 3
+                            }
+                        }
+                    )
+                    
+                    for result in response.get('retrievalResults', []):
+                        all_results.append({
+                            'content': result.get('content', {}).get('text', ''),
+                            'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                            'score': result.get('score', 0.0)
+                        })
+                except Exception as kb_error:
+                    print(f"Failed to query KB {kb_id}: {kb_error}")
+            
+            # Sort by score and return top 5
+            all_results.sort(key=lambda x: x['score'], reverse=True)
+            return all_results[:5]
         except Exception as e:
             print(f"Knowledge base search error: {e}")
             return []

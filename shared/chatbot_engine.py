@@ -224,7 +224,7 @@ class ChatbotEngine:
         conversation_history: List[Dict[str, str]]
     ) -> Tuple[str, List[str]]:
         """
-        Handle RAG (Retrieval-Augmented Generation) queries.
+        Handle RAG (Retrieval-Augmented Generation) queries using Bedrock Knowledge Base.
         
         Args:
             message: User's message
@@ -234,32 +234,54 @@ class ChatbotEngine:
             Tuple of (response_content, sources)
         """
         try:
-            # For now, this is a placeholder implementation
-            # In the actual implementation, this would:
-            # 1. Call the MCP server to search documents
-            # 2. Retrieve relevant document chunks
-            # 3. Generate response using Strand SDK with context
+            # Query both knowledge bases
+            kb_ids = ['U6EAI0DHJC', 'CTFE3RJR01']
+            all_documents = []
             
-            # Placeholder: simulate document retrieval
-            mock_documents = [
-                {
-                    'id': 'doc_1',
-                    'content': 'This is a sample document content for RAG testing.',
-                    'source': 'sample_document.pdf',
-                    'score': 0.85
-                }
-            ]
+            bedrock_agent = boto3.client('bedrock-agent-runtime', region_name=self.region)
+            
+            for kb_id in kb_ids:
+                try:
+                    response = bedrock_agent.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={'text': message},
+                        retrievalConfiguration={
+                            'vectorSearchConfiguration': {
+                                'numberOfResults': 5
+                            }
+                        }
+                    )
+                    
+                    for result in response.get('retrievalResults', []):
+                        all_documents.append({
+                            'id': result.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', 'unknown'),
+                            'content': result.get('content', {}).get('text', ''),
+                            'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                            'score': result.get('score', 0.0)
+                        })
+                except Exception as kb_error:
+                    logger.warning(f"Failed to query KB {kb_id}: {str(kb_error)}")
+            
+            if not all_documents:
+                logger.warning("No documents retrieved from knowledge bases")
+                response_content = await self.strand_utils.generate_general_response(
+                    message, conversation_history
+                )
+                return response_content, []
+            
+            # Sort by score and take top 5
+            all_documents.sort(key=lambda x: x['score'], reverse=True)
+            all_documents = all_documents[:5]
             
             response_content, sources = await self.strand_utils.generate_rag_response(
-                message, mock_documents, conversation_history
+                message, all_documents, conversation_history
             )
             
-            logger.info(f"Generated RAG response with {len(sources)} sources")
+            logger.info(f"Generated RAG response with {len(sources)} sources from {len(kb_ids)} KBs")
             return response_content, sources
             
         except Exception as e:
             logger.error(f"Failed to handle RAG query: {str(e)}")
-            # Fallback to general response
             response_content = await self.strand_utils.generate_general_response(
                 message, conversation_history
             )
