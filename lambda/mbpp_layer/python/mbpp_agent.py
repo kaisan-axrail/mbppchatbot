@@ -303,13 +303,13 @@ If they provided description, extract it and ask for location. If they provided 
             
             preview = (
                 "Please confirm these details:\n\n"
-                f"Subject: Incident Report\n"
-                f"Details: {collected_data['description']}\n"
-                f"Feedback: {classification['feedback']}\n"
-                f"Category: {classification['category']}\n"
-                f"Sub-category: {classification['sub_category']}\n"
-                f"Blocked road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n"
-                f"Location: {collected_data['location']}\n\n"
+                f"**Subject:** Incident Report\n\n"
+                f"**Details:** {collected_data['description']}\n\n"
+                f"**Feedback:** {classification['feedback']}\n\n"
+                f"**Category:** {classification['category']}\n\n"
+                f"**Sub-category:** {classification['sub_category']}\n\n"
+                f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                f"**Location:** {collected_data['location']}\n\n"
                 "Is this correct?"
             )
             
