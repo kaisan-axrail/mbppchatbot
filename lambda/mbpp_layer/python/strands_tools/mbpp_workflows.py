@@ -183,7 +183,7 @@ class MBPPWorkflowManager:
                 return {"status": "error", "message": "Workflow not found"}
             workflow["current_step"] = 2
             workflow["data"]["description"] = data.get("description")
-            return {"status": "success", "step": 2, "message": "Can you please confirm if your internet connection is working properly?", "workflow_id": workflow_id}
+            return {"status": "success", "step": 2, "message": "Can you please confirm if your internet connection is working properly?", "options": ["Yes", "No"], "workflow_id": workflow_id}
         
         elif action == "step3_verify":
             workflow = self.workflows.get(workflow_id)
@@ -206,6 +206,7 @@ class MBPPWorkflowManager:
             
             preview = (
                 "Please confirm these details:\n\n"
+                f"**Feedback:** {ticket['feedback']}\n\n"
                 f"**Subject:** {ticket['subject']}\n\n"
                 f"**Details:** {ticket['details']}\n\n"
                 f"**Category:** {ticket['category']}\n\n"
