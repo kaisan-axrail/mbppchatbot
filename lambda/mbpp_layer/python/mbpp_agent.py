@@ -302,15 +302,15 @@ If they provided description, extract it and ask for location. If they provided 
             classification = manager.classify_incident(collected_data['description'])
             ticket_number = manager._generate_ticket_number()
             
-            preview = f"""Please confirm these details:
-
-Ticket #: {ticket_number}
-Description: {collected_data['description']}
-Location: {collected_data['location']}
-Category: {classification['category']} - {classification['sub_category']}
-Blocking Road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}
-
-Is this correct?"""
+            preview = (
+                "Please confirm these details:\n\n"
+                f"Ticket #: {ticket_number}\n"
+                f"Description: {collected_data['description']}\n"
+                f"Location: {collected_data['location']}\n"
+                f"Category: {classification['category']} - {classification['sub_category']}\n"
+                f"Blocking Road: {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                "Is this correct?"
+            )
             
             collected_data['preview_ticket'] = ticket_number
             collected_data['preview_classification'] = classification
@@ -354,8 +354,15 @@ Is this correct?"""
                 "created_at": datetime.now().isoformat()
             }
             
-            manager._save_report(ticket)
-            manager._create_event('incident_created', ticket_number, collected_data)
+            # Save ticket to DynamoDB
+            save_success = manager._save_report(ticket)
+            print(f"Ticket save result: {save_success}, ticket_number: {ticket_number}")
+            
+            if save_success:
+                manager._create_event('incident_created', ticket_number, collected_data)
+                print(f"Event created for ticket: {ticket_number}")
+            else:
+                print(f"ERROR: Failed to save ticket {ticket_number} to DynamoDB")
             
             del self.active_workflows[session_id]
             self._save_workflow_state(session_id)
