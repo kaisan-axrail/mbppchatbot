@@ -168,60 +168,8 @@ class MBPPAgent:
                 "session_id": session_id
             }
         
-        # Use AI to start workflow intelligently for text
-        prompt = f"""You are helping a user report an incident. The user said: "{message}"
-
-You need to collect:
-1. Description of what happened
-2. Location
-3. A contextual yes/no question about immediate danger/hazard
-
-Analyze the user's message and respond with ONLY a JSON:
-{{"has_description": true/false, "has_location": true/false, "next_question": "what to ask next"}}
-
-If they provided description, extract it and ask for location. If they provided both, extract both and ask contextual hazard question. If neither, ask for description."""
-        
-        try:
-            response = self.bedrock_runtime.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                body=json.dumps({
-                    "anthropic_version": "bedrock-2023-05-31",
-                    "max_tokens": 300,
-                    "messages": [{"role": "user", "content": prompt}]
-                })
-            )
-            result = json.loads(response['body'].read())
-            ai_response = json.loads(result['content'][0]['text'])
-            
-            # Update workflow data - store actual message as description
-            if ai_response.get('has_description'):
-                self.active_workflows[session_id]['data']['description'] = message
-                self.active_workflows[session_id]['current_step'] = 2
-            
-            if ai_response.get('has_location'):
-                # Extract location from message using AI
-                try:
-                    loc_prompt = f'Extract ONLY the location from: "{message}". Return just the location text, nothing else.'
-                    loc_response = self.bedrock_runtime.invoke_model(
-                        modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                        body=json.dumps({
-                            "anthropic_version": "bedrock-2023-05-31",
-                            "max_tokens": 100,
-                            "messages": [{"role": "user", "content": loc_prompt}]
-                        })
-                    )
-                    loc_result = json.loads(loc_response['body'].read())
-                    location = loc_result['content'][0]['text'].strip()
-                    self.active_workflows[session_id]['data']['location'] = location
-                except:
-                    self.active_workflows[session_id]['data']['location'] = message
-                self.active_workflows[session_id]['current_step'] = 3
-            
-            response_text = ai_response.get('next_question', 'Please describe what happened.')
-            
-        except Exception as e:
-            print(f"AI extraction error: {e}")
-            response_text = "Please share an image of the incident, the location and describe what happened. You may also share your location to make it easier.\n\n(e.g. I would like to complain about a pothole at Jalan Penang, 10000, Georgetown)"
+        # For text incident, always show the standard initial message
+        response_text = "Please share an image of the incident, the location and describe what happened. You may also share your location to make it easier.\n\n(e.g. I would like to complain about a pothole at Jalan Penang, 10000, Georgetown)"
         
         return {
             "type": "workflow",
