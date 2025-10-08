@@ -122,7 +122,7 @@ class MBPPAgent:
         has_image: bool,
         image_data: Optional[str]
     ) -> Dict[str, Any]:
-        """Start a new workflow"""
+        """Start a new workflow using AI"""
         import uuid
         workflow_id = str(uuid.uuid4())
         
@@ -138,17 +138,45 @@ class MBPPAgent:
             }
         }
         
-        # Call workflow manager directly
-        result = mbpp_workflow(
-            action="start",
-            workflow_type=workflow_type,
-            workflow_id=workflow_id,
-            data={"image": image_data} if has_image else {},
-            message=message,
-            has_image=has_image
-        )
+        # Use AI to start workflow intelligently
+        prompt = f"""You are helping a user report an incident. The user said: "{message}"
+
+You need to collect:
+1. Description of what happened
+2. Location
+3. Whether it's blocking the road/causing hazard
+
+Analyze the user's message and respond with ONLY a JSON:
+{{"has_description": true/false, "has_location": true/false, "description": "extracted description or empty", "location": "extracted location or empty", "next_question": "what to ask next"}}
+
+If they provided description, ask for location. If they provided both, ask about hazard. If neither, ask for description."""
         
-        response_text = result.get('message', 'Workflow started')
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 300,
+                    "messages": [{"role": "user", "content": prompt}]
+                })
+            )
+            result = json.loads(response['body'].read())
+            ai_response = json.loads(result['content'][0]['text'])
+            
+            # Update workflow data based on AI extraction
+            if ai_response.get('has_description'):
+                self.active_workflows[session_id]['data']['description'] = ai_response.get('description')
+                self.active_workflows[session_id]['current_step'] = 2
+            
+            if ai_response.get('has_location'):
+                self.active_workflows[session_id]['data']['location'] = ai_response.get('location')
+                self.active_workflows[session_id]['current_step'] = 3
+            
+            response_text = ai_response.get('next_question', 'Please describe what happened.')
+            
+        except Exception as e:
+            print(f"AI extraction error: {e}")
+            response_text = "Please describe what happened."
         
         return {
             "type": "workflow",
@@ -166,40 +194,133 @@ class MBPPAgent:
         image_data: Optional[str],
         location: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Continue an existing workflow"""
+        """Continue an existing workflow using AI"""
         workflow_context = self.active_workflows[session_id]
         workflow_id = workflow_context["workflow_id"]
         workflow_type = workflow_context["workflow_type"]
         current_step = workflow_context["current_step"]
         
-        # Determine next action based on workflow type and step
-        action = self._get_workflow_action(workflow_type, current_step, message)
-        data = self._extract_workflow_data(workflow_type, current_step, message, workflow_context)
+        # Use AI to understand user response and determine next step
+        collected_data = workflow_context["data"]
+        prompt = f"""You are helping collect incident report information.
+
+Collected so far:
+- Description: {collected_data.get('description', 'NOT YET')}
+- Location: {collected_data.get('location', 'NOT YET')}
+- Hazard: {collected_data.get('hazard_confirmation', 'NOT YET')}
+
+User just said: "{message}"
+
+Respond with ONLY JSON:
+{{"field": "description/location/hazard/confirmation", "value": "extracted value", "next_step": "description/location/hazard/confirm/complete", "next_question": "what to ask next or empty if complete"}}
+
+Rules:
+- If missing description, next_step=description
+- If missing location, next_step=location
+- If missing hazard, next_step=hazard (generate contextual yes/no question)
+- If all collected, next_step=confirm (show ticket preview)
+- If user confirms ticket, next_step=complete"""
         
-        # Call workflow manager directly
-        result = mbpp_workflow(
-            action=action,
-            workflow_type=workflow_type,
-            workflow_id=workflow_id,
-            data=data
-        )
-        
-        response_text = result.get('message', '')
-        
-        # Update workflow context
-        workflow_context["current_step"] += 1
-        workflow_context["data"]["last_message"] = message
-        
-        # Check if workflow is completed
-        if result.get('status') == 'success' and 'ticket_number' in result:
-            del self.active_workflows[session_id]
-            return {
-                "type": "workflow_complete",
-                "workflow_type": workflow_type,
-                "workflow_id": workflow_id,
-                "response": response_text,
-                "session_id": session_id
-            }
+        try:
+            response = self.bedrock_runtime.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 400,
+                    "messages": [{"role": "user", "content": prompt}]
+                })
+            )
+            result = json.loads(response['body'].read())
+            ai_response = json.loads(result['content'][0]['text'])
+            
+            # Update workflow data
+            field = ai_response.get('field')
+            value = ai_response.get('value')
+            next_step = ai_response.get('next_step')
+            
+            if field == 'description':
+                workflow_context['data']['description'] = value
+            elif field == 'location':
+                workflow_context['data']['location'] = value
+            elif field == 'hazard':
+                workflow_context['data']['hazard_confirmation'] = 'yes' in value.lower()
+            elif field == 'confirmation':
+                if 'no' in value.lower():
+                    # Restart
+                    workflow_context['current_step'] = 1
+                    workflow_context['data'] = {}
+                    return {
+                        "type": "workflow",
+                        "workflow_type": workflow_type,
+                        "workflow_id": workflow_id,
+                        "response": "Let's start over. Please describe what happened.",
+                        "session_id": session_id
+                    }
+            
+            # Handle completion
+            if next_step == 'complete':
+                # Save ticket
+                from strands_tools.mbpp_workflows import MBPPWorkflowManager
+                manager = MBPPWorkflowManager()
+                classification = manager.classify_incident(workflow_context['data']['description'])
+                
+                ticket_number = manager._generate_ticket_number()
+                ticket = {
+                    "ticket_number": ticket_number,
+                    "subject": "Incident Report",
+                    "details": workflow_context['data']['description'],
+                    "location": workflow_context['data']['location'],
+                    "feedback": classification["feedback"],
+                    "category": classification["category"],
+                    "sub_category": classification["sub_category"],
+                    "blocked_road": workflow_context['data'].get('hazard_confirmation', False),
+                    "created_at": datetime.now().isoformat()
+                }
+                
+                manager._save_report(ticket)
+                manager._create_event('incident_created', ticket_number, workflow_context['data'])
+                
+                del self.active_workflows[session_id]
+                return {
+                    "type": "workflow_complete",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": f"Thank you for your submission! Your reference number is {ticket_number}",
+                    "session_id": session_id
+                }
+            
+            # Handle ticket preview
+            if next_step == 'confirm':
+                from strands_tools.mbpp_workflows import MBPPWorkflowManager
+                manager = MBPPWorkflowManager()
+                classification = manager.classify_incident(workflow_context['data']['description'])
+                ticket_number = manager._generate_ticket_number()
+                
+                preview = f"""Please confirm these details:
+
+Ticket #: {ticket_number}
+Description: {workflow_context['data']['description']}
+Location: {workflow_context['data']['location']}
+Category: {classification['category']} - {classification['sub_category']}
+Blocking Road: {'Yes' if workflow_context['data'].get('hazard_confirmation') else 'No'}
+
+Is this correct? (Yes/No)"""
+                
+                workflow_context['data']['preview_ticket'] = ticket_number
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": preview,
+                    "session_id": session_id
+                }
+            
+            response_text = ai_response.get('next_question', '')
+            workflow_context["current_step"] += 1
+            
+        except Exception as e:
+            print(f"AI workflow error: {e}")
+            response_text = "Could you please provide more details?"
         
         return {
             "type": "workflow",
