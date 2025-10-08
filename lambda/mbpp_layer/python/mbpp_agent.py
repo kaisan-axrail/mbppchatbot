@@ -258,6 +258,21 @@ Collected so far:
 
 User just said: "{message}"
 
+Determine what field the user is providing:
+- If we don't have description yet, they're providing description
+- If we have description but not location, they're providing location
+- If we have both but not hazard answer, they're answering hazard question
+- If we have all three, they're confirming the ticket
+
+Respond with ONLY JSON:
+{{"field": "description/location/hazard/confirmation", "next_step": "ask_location/ask_hazard/show_preview/save_ticket", "next_question": "what to ask next"}}
+
+For hazard question, generate contextual question based on description (e.g., fallen tree -> "Is it blocking the road?")."""ption: {collected_data.get('description', 'NOT YET')}
+- Location: {collected_data.get('location', 'NOT YET')}
+- Hazard: {collected_data.get('hazard_confirmation', 'NOT YET')}
+
+User just said: "{message}"
+
 Respond with ONLY JSON:
 {{"field": "description/location/hazard/confirmation", "value": "extracted value", "next_step": "description/location/hazard/confirm/complete", "next_question": "what to ask next or empty if complete"}}
 
@@ -280,15 +295,14 @@ Rules:
             result = json.loads(response['body'].read())
             ai_response = json.loads(result['content'][0]['text'])
             
-            # Update workflow data - store the actual user message
+            # Update workflow data based on what field user is providing
             field = ai_response.get('field')
-            value = ai_response.get('value')
             next_step = ai_response.get('next_step')
             
             if field == 'description':
-                workflow_context['data']['description'] = message  # Store actual message
+                workflow_context['data']['description'] = message
             elif field == 'location':
-                workflow_context['data']['location'] = message  # Store actual message
+                workflow_context['data']['location'] = message
             elif field == 'hazard':
                 workflow_context['data']['hazard_confirmation'] = 'yes' in message.lower()
             elif field == 'confirmation':
