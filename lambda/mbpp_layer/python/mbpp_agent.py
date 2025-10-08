@@ -144,12 +144,12 @@ class MBPPAgent:
 You need to collect:
 1. Description of what happened
 2. Location
-3. Whether it's blocking the road/causing hazard
+3. A contextual yes/no question about immediate danger/hazard (e.g., "Is it blocking the road?", "Is anyone injured?", "Is it causing danger?")
 
 Analyze the user's message and respond with ONLY a JSON:
 {{"has_description": true/false, "has_location": true/false, "description": "extracted description or empty", "location": "extracted location or empty", "next_question": "what to ask next"}}
 
-If they provided description, ask for location. If they provided both, ask about hazard. If neither, ask for description."""
+If they provided description, ask for location. If they provided both, generate a contextual hazard question based on the incident type. If neither, ask for description."""
         
         try:
             response = self.bedrock_runtime.invoke_model(
@@ -217,7 +217,7 @@ Respond with ONLY JSON:
 Rules:
 - If missing description, next_step=description
 - If missing location, next_step=location
-- If missing hazard, next_step=hazard (generate contextual yes/no question)
+- If missing hazard, next_step=hazard (generate contextual yes/no question based on incident type - e.g., for fallen tree ask "Is it blocking the road?", for pothole ask "Is it causing danger to vehicles?", for flood ask "Is access blocked?")
 - If all collected, next_step=confirm (show ticket preview)
 - If user confirms ticket, next_step=complete"""
         
