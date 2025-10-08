@@ -224,7 +224,7 @@ class MCPChatbotServer:
             self.logger.error(f"Tool execution failed: {str(e)}")
             raise MCPServerError(f"Tool execution failed: {str(e)}")
     
-    async def search_documents(self, query: str, limit: int = 5, threshold: float = 0.7) -> Dict[str, Any]:
+    async def search_documents(self, query: str, limit: int = 5, threshold: float = 0.3) -> Dict[str, Any]:
         """
         Search documents using both Bedrock Knowledge Bases.
         
