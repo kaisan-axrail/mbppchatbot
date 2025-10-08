@@ -150,6 +150,14 @@ class LambdaStack(Stack):
             description="MBPP Workflow Agent with Strands"
         )
         
+        # Create WebSocket Layer with shared module and dependencies
+        websocket_layer = _lambda.LayerVersion(
+            self, "WebSocketLayer",
+            code=_lambda.Code.from_asset("../lambda/websocket_layer"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            description="WebSocket handler dependencies and shared module"
+        )
+        
         # Create WebSocket handler Lambda function
         self.websocket_handler = _lambda.Function(
             self, "WebSocketHandler",
@@ -157,7 +165,7 @@ class LambdaStack(Stack):
             handler="handler_working.lambda_handler",
             role=websocket_role,
             code=_lambda.Code.from_asset("../lambda/websocket_handler"),
-            layers=[shared_layer, mbpp_workflow_layer] if shared_layer else [mbpp_workflow_layer],
+            layers=[websocket_layer, mbpp_workflow_layer],
             environment={
                 "SESSIONS_TABLE": self.sessions_table.table_name,
                 "CONVERSATIONS_TABLE": self.conversations_table.table_name,
