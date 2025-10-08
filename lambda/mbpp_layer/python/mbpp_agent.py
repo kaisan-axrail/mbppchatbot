@@ -196,14 +196,14 @@ class MBPPAgent:
         workflow_context["data"]["last_message"] = message
         
         # Check if workflow is completed
-        if "completed" in str(response).lower() or "ticket has been logged" in str(response).lower():
+        if "completed" in str(response_text).lower() or "ticket has been logged" in str(response_text).lower():
             # Clean up completed workflow
             del self.active_workflows[session_id]
             return {
                 "type": "workflow_complete",
                 "workflow_type": workflow_type,
                 "workflow_id": workflow_id,
-                "response": response,
+                "response": response_text,
                 "session_id": session_id
             }
         
@@ -211,7 +211,7 @@ class MBPPAgent:
             "type": "workflow",
             "workflow_type": workflow_type,
             "workflow_id": workflow_id,
-            "response": response,
+            "response": response_text,
             "session_id": session_id
         }
     

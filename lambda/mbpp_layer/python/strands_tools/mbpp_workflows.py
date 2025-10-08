@@ -19,6 +19,49 @@ class MBPPWorkflowManager:
         self.events_table = self.dynamodb.Table(os.environ.get('EVENTS_TABLE', 'mbpp-events'))
         self.images_bucket = os.environ.get('IMAGES_BUCKET', 'mbpp-incident-images')
     
+    def classify_incident(self, description: str) -> Dict[str, str]:
+        """Classify incident from description into feedback, category, and sub_category."""
+        desc_lower = description.lower()
+        
+        # Default classification
+        classification = {
+            "feedback": "Aduan",
+            "category": "Lain-lain",
+            "sub_category": "--"
+        }
+        
+        # Natural Disaster (Bencana Alam)
+        if any(k in desc_lower for k in ['fallen tree', 'pokok tumbang', 'tree fall', 'pohon tumbang']):
+            classification.update({"category": "Bencana Alam", "sub_category": "Pokok Tumbang"})
+        elif any(k in desc_lower for k in ['flood', 'banjir', 'water overflow', 'flooded']):
+            classification.update({"category": "Bencana Alam", "sub_category": "Banjir"})
+        elif any(k in desc_lower for k in ['landslide', 'tanah runtuh', 'soil collapse']):
+            classification.update({"category": "Bencana Alam", "sub_category": "Tanah Runtuh"})
+        
+        # Road Issues (Jalan Raya)
+        elif any(k in desc_lower for k in ['pothole', 'lubang jalan', 'road hole', 'damaged road']):
+            classification.update({"category": "Jalan Raya", "sub_category": "Lubang Jalan"})
+        elif any(k in desc_lower for k in ['crack', 'retak jalan', 'road crack']):
+            classification.update({"category": "Jalan Raya", "sub_category": "Jalan Retak"})
+        
+        # Infrastructure (Infrastruktur)
+        elif any(k in desc_lower for k in ['street light', 'lampu jalan', 'lamp', 'lighting']):
+            classification.update({"category": "Infrastruktur", "sub_category": "Lampu Jalan"})
+        elif any(k in desc_lower for k in ['drain', 'longkang', 'parit', 'drainage']):
+            classification.update({"category": "Infrastruktur", "sub_category": "Longkang"})
+        elif any(k in desc_lower for k in ['traffic light', 'lampu isyarat', 'signal']):
+            classification.update({"category": "Infrastruktur", "sub_category": "Lampu Isyarat"})
+        
+        # Waste Management (Pengurusan Sampah)
+        elif any(k in desc_lower for k in ['garbage', 'sampah', 'trash', 'rubbish', 'waste']):
+            classification.update({"category": "Pengurusan Sampah", "sub_category": "Sampah Berserakan"})
+        
+        # Service/System Error
+        elif any(k in desc_lower for k in ['website', 'system', 'service', 'app', 'online', 'portal']):
+            classification.update({"category": "Service/ System Error", "sub_category": "--"})
+        
+        return classification
+    
     def detect_workflow_type(self, message: str, has_image: bool = False) -> str:
         message_lower = message.lower()
         incident_keywords = ['incident', 'report', 'emergency', 'hazard', 'fallen tree', 'pothole', 'flood', 'accident', 'blocking']
@@ -189,15 +232,18 @@ class MBPPWorkflowManager:
             workflow["current_step"] = 5
             workflow["data"]["hazard_confirmation"] = data.get("hazard_confirmation")
             
+            # Classify incident from description
+            classification = self.classify_incident(workflow["data"]["description"])
+            
             ticket_number = self._generate_ticket_number()
             ticket = {
                 "ticket_number": ticket_number,
                 "subject": data.get("subject", "Incident Report"),
                 "details": workflow["data"]["description"],
                 "location": workflow["data"]["location"],
-                "feedback": "Aduan",
-                "category": data.get("category", "Bencana Alam"),
-                "sub_category": data.get("sub_category", "Pokok Tumbang"),
+                "feedback": classification["feedback"],
+                "category": classification["category"],
+                "sub_category": classification["sub_category"],
                 "blocked_road": workflow["data"]["hazard_confirmation"],
                 "created_at": datetime.now().isoformat()
             }
@@ -242,15 +288,18 @@ class MBPPWorkflowManager:
             workflow["current_step"] = 4
             workflow["data"]["hazard_confirmation"] = data.get("hazard_confirmation")
             
+            # Classify incident from description
+            classification = self.classify_incident(workflow["data"]["description"])
+            
             ticket_number = self._generate_ticket_number()
             ticket = {
                 "ticket_number": ticket_number,
                 "subject": data.get("subject", "Incident Report"),
                 "details": workflow["data"]["description"],
                 "location": workflow["data"]["location"],
-                "feedback": "Aduan",
-                "category": data.get("category", "Bencana Alam"),
-                "sub_category": data.get("sub_category", "Pokok Tumbang"),
+                "feedback": classification["feedback"],
+                "category": classification["category"],
+                "sub_category": classification["sub_category"],
                 "blocked_road": workflow["data"]["hazard_confirmation"],
                 "created_at": datetime.now().isoformat()
             }
