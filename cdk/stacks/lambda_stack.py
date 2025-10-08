@@ -173,12 +173,13 @@ class LambdaStack(Stack):
                 "BEDROCK_INFERENCE_PROFILE_ARN": "",  # Set this for production deployment
                 "BEDROCK_CROSS_REGION_PROFILE": "apac.amazon.nova-pro-v1:0",
                 # Fallback model configuration
-                "BEDROCK_CLAUDE_MODEL": "amazon.nova-pro-v1:0",
+                "BEDROCK_CLAUDE_MODEL": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "USE_CROSS_REGION_INFERENCE": "true",
                 "BEDROCK_EMBEDDING_MODEL": "amazon.titan-embed-text-v1",
                 # Circuit breaker configuration
                 "BEDROCK_CIRCUIT_BREAKER_THRESHOLD": "5",
                 "BEDROCK_CIRCUIT_BREAKER_TIMEOUT": "30",
-                "WEBSOCKET_DOMAIN_NAME": "ynw017q5lc.execute-api.ap-southeast-1.amazonaws.com",
+                "WEBSOCKET_DOMAIN_NAME": "i75sc6a4ul.execute-api.ap-southeast-1.amazonaws.com",
                 "MCP_SSE_ENDPOINT": "https://4fsaarjly6.execute-api.ap-southeast-1.amazonaws.com/prod/mcp/sse",
                 "LOG_LEVEL": "INFO"
             },
