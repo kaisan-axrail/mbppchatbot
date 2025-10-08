@@ -214,21 +214,6 @@ class MCPChatbotServer:
         try:
             if tool_name == 'search_documents':
                 return await self.search_documents(**parameters)
-            elif tool_name == 'create_event':
-                from mcp_lambda_router import invoke_crud_lambda
-                return await invoke_crud_lambda('create', parameters)
-            elif tool_name == 'read_event':
-                from mcp_lambda_router import invoke_crud_lambda
-                return await invoke_crud_lambda('read', parameters)
-            elif tool_name == 'update_event':
-                from mcp_lambda_router import invoke_crud_lambda
-                return await invoke_crud_lambda('update', parameters)
-            elif tool_name == 'delete_event':
-                from mcp_lambda_router import invoke_crud_lambda
-                return await invoke_crud_lambda('delete', parameters)
-            elif tool_name == 'list_events':
-                from mcp_lambda_router import invoke_crud_lambda
-                return await invoke_crud_lambda('list', parameters)
             else:
                 raise MCPServerError(f"Unknown tool: {tool_name}")
         except Exception as e:
