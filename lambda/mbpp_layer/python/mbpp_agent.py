@@ -285,11 +285,14 @@ class MBPPAgent:
         if current_step == 0 and collected_data.get('has_image'):
             if 'yes' in message.lower() and 'incident' in message.lower():
                 workflow_context['current_step'] = 1
+                # Ensure image_data is preserved from initial upload
+                if not collected_data.get('image_data') and workflow_context['data'].get('image_data'):
+                    collected_data['image_data'] = workflow_context['data']['image_data']
                 return {
                     "type": "workflow",
                     "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
-                    "response": "Please describe what happened and tell us the location.",
+                    "response": "Please describe what happened.",
                     "session_id": session_id
                 }
             else:
@@ -339,16 +342,32 @@ class MBPPAgent:
             collected_data['location'] = message
             workflow_context['current_step'] = 3
             
-            # Generate contextual hazard question
-            desc = collected_data['description'].lower()
-            if 'tree' in desc or 'fallen' in desc:
-                hazard_q = "Is the fallen tree blocking the road?"
-            elif 'pothole' in desc:
-                hazard_q = "Is the pothole causing traffic issues?"
-            elif 'flood' in desc:
-                hazard_q = "Is the flooding blocking access?"
-            else:
-                hazard_q = "Is this causing immediate danger or blocking access?"
+            # Use AI to generate contextual hazard question
+            desc = collected_data['description']
+            try:
+                prompt = f"""Based on this incident: "{desc}"
+
+Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
+Examples:
+- "Is it blocking the main road?"
+- "Is it causing immediate danger?"
+- "Is access blocked?"
+
+Respond with ONLY the question, nothing else."""
+                
+                response = self.bedrock_runtime.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 50,
+                        "messages": [{"role": "user", "content": prompt}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                hazard_q = result['content'][0]['text'].strip()
+            except Exception as e:
+                print(f"AI hazard question error: {e}")
+                hazard_q = "Is it blocking the main road?"
             
             return {
                 "type": "workflow",
@@ -532,8 +551,37 @@ If location is not mentioned, use empty string for location."""
         os.environ['AWS_REGION'] = os.environ.get('BEDROCK_REGION', 'us-east-1')
         os.environ['MIN_SCORE'] = '0.6'
         
-        # Let the agent use retrieve tool automatically
-        response = self.rag_agent(message)
+        # Call retrieve tool directly
+        from strands_tools.retrieve import retrieve
+        
+        tool_input = {
+            "toolUseId": "retrieve-1",
+            "input": {
+                "text": message,
+                "numberOfResults": 5,
+                "score": 0.6
+            }
+        }
+        
+        retrieve_result = retrieve(tool_input)
+        
+        # Check if results were found
+        if retrieve_result.get('status') == 'success':
+            content = retrieve_result.get('content', [{}])[0].get('text', '')
+            
+            # Use agent to format the answer based on retrieved content
+            prompt = f"""Based on the following information from the MBPP knowledge base, answer the user's question.
+
+User Question: {message}
+
+Retrieved Information:
+{content}
+
+Provide a clear, helpful answer in English based on the retrieved information. If the information doesn't answer the question, say so."""
+            
+            response = self.rag_agent(prompt)
+        else:
+            response = "I don't have information about that in the MBPP knowledge base."
         
         return {
             "type": "rag",
