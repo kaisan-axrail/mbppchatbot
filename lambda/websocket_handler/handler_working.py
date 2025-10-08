@@ -80,11 +80,13 @@ def handle_message(connection_id, event):
         
         user_message = message_data.get('message', '')
         session_id = message_data.get('sessionId', f'session_{connection_id}')
+        has_image = message_data.get('hasImage', False)
+        image_data = message_data.get('imageData')
         
-        logger.info(f"Processing message with Nova Pro: {user_message}")
+        logger.info(f"Processing message with Nova Pro: {user_message}, has_image: {has_image}")
         
         # Use the actual Nova Pro chatbot engine
-        response_data = process_with_nova_pro(user_message, session_id)
+        response_data = process_with_nova_pro(user_message, session_id, has_image, image_data)
         
         # Send response back
         send_message_to_connection(connection_id, response_data)
@@ -130,7 +132,7 @@ def handle_conversation_update(connection_id, event):
         logger.error(f"Conversation update error: {str(e)}")
         return {'statusCode': 500}
 
-def process_with_nova_pro(user_message: str, session_id: str) -> dict:
+def process_with_nova_pro(user_message: str, session_id: str, has_image: bool = False, image_data: str = None) -> dict:
     """Process message using MBPP Workflow Agent or Nova Pro chatbot engine."""
     try:
         # Check if this is a workflow trigger
@@ -138,7 +140,8 @@ def process_with_nova_pro(user_message: str, session_id: str) -> dict:
         result = mbpp_agent.process_message(
             message=user_message,
             session_id=session_id,
-            has_image=False
+            has_image=has_image,
+            image_data=image_data
         )
         
         # If it's a workflow, return workflow response
