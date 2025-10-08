@@ -234,8 +234,93 @@ If they provided description, extract it and ask for location. If they provided 
         workflow_type = workflow_context["workflow_type"]
         current_step = workflow_context["current_step"]
         
-        # Handle image incident confirmation (step 0)
         collected_data = workflow_context["data"]
+        
+        # Handle complaint workflow
+        if workflow_type == "complaint":
+            if current_step == 1 and 'description' not in collected_data:
+                collected_data['description'] = message
+                workflow_context['current_step'] = 2
+                return {
+                    "type": "workflow",
+                    "workflow_type": "complaint",
+                    "workflow_id": workflow_id,
+                    "response": "Can you please confirm if your internet connection is working properly?",
+                    "session_id": session_id,
+                    "quick_replies": [
+                        {"text": "✅ Yes", "value": "yes"},
+                        {"text": "❌ No", "value": "no"}
+                    ]
+                }
+            elif current_step == 2:
+                collected_data['verification'] = 'yes' in message.lower()
+                workflow_context['current_step'] = 3
+                
+                from strands_tools.mbpp_workflows import MBPPWorkflowManager
+                manager = MBPPWorkflowManager()
+                ticket_number = manager._generate_ticket_number()
+                
+                ticket = {
+                    "ticket_number": ticket_number,
+                    "subject": "Service Error",
+                    "details": collected_data['description'],
+                    "feedback": "Aduan",
+                    "category": "Service/ System Error",
+                    "sub_category": "-",
+                    "created_at": datetime.now().isoformat()
+                }
+                
+                collected_data['ticket_details'] = ticket
+                
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** {ticket['subject']}\n\n"
+                    f"**Details:** {ticket['details']}\n\n"
+                    f"**Category:** {ticket['category']}\n\n"
+                    f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
+                    "Is this correct?"
+                )
+                
+                return {
+                    "type": "workflow",
+                    "workflow_type": "complaint",
+                    "workflow_id": workflow_id,
+                    "response": preview,
+                    "session_id": session_id,
+                    "quick_replies": [
+                        {"text": "✅ Yes, submit", "value": "yes"},
+                        {"text": "❌ No, start over", "value": "no"}
+                    ]
+                }
+            elif current_step == 3:
+                if 'no' in message.lower():
+                    workflow_context['current_step'] = 1
+                    workflow_context['data'] = {}
+                    return {
+                        "type": "workflow",
+                        "workflow_type": "complaint",
+                        "workflow_id": workflow_id,
+                        "response": "Let's start over. Please describe the issue.",
+                        "session_id": session_id
+                    }
+                
+                from strands_tools.mbpp_workflows import MBPPWorkflowManager
+                manager = MBPPWorkflowManager()
+                ticket = collected_data['ticket_details']
+                manager._save_report(ticket)
+                manager._create_event('complaint_created', ticket['ticket_number'], collected_data)
+                
+                del self.active_workflows[session_id]
+                self._save_workflow_state(session_id)
+                return {
+                    "type": "workflow_complete",
+                    "workflow_type": "complaint",
+                    "workflow_id": workflow_id,
+                    "response": f"Thank you for your submission! Your reference number is {ticket['ticket_number']}",
+                    "session_id": session_id
+                }
+        
+        # Handle image incident confirmation (step 0)
         if current_step == 0 and collected_data.get('has_image'):
             if 'yes' in message.lower() and 'incident' in message.lower():
                 workflow_context['current_step'] = 1
@@ -247,13 +332,15 @@ If they provided description, extract it and ask for location. If they provided 
                     "session_id": session_id
                 }
             else:
-                # User selected service complaint
-                del self.active_workflows[session_id]
+                # User selected service complaint - switch to complaint workflow
+                workflow_context['workflow_type'] = 'complaint'
+                workflow_context['current_step'] = 1
+                workflow_context['data'] = {}
                 return {
                     "type": "workflow",
                     "workflow_type": "complaint",
                     "workflow_id": workflow_id,
-                    "response": "Please describe the service issue or feedback.",
+                    "response": "Thank you for your feedback. Could you please describe the issue or service/system error?\n\n(e.g. I want to complain about slow response times on a government website.)",
                     "session_id": session_id
                 }
         
