@@ -48,7 +48,7 @@ License-File: LICENSE
 License-File: COPYING
 License-File: AUTHORS
 Provides-Extra: watchmedo
-Requires-Dist: PyYAML >=3.10 ; extra == 'watchmedo'
+Requires-Dist: PyYAML>=3.10; extra == "watchmedo"
 
 Watchdog
 ========

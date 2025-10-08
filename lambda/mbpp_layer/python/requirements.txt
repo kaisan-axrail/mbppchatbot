@@ -1,5 +1,0 @@
-# MCP server Lambda dependencies
-boto3>=1.34.0
-botocore>=1.34.0
-mcp>=1.0.0
-fastmcp>=0.1.0
