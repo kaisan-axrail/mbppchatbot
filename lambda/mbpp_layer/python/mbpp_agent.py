@@ -12,6 +12,7 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 from strands import Agent
+from strands.session.s3_session_manager import S3SessionManager
 from strands_tools import workflow
 from strands_tools.mbpp_workflows import mbpp_workflow
 import boto3
@@ -19,14 +20,24 @@ import boto3
 class MBPPAgent:
     """Main MBPP Agent that handles workflows and RAG queries"""
     
-    def __init__(self):
+    def __init__(self, session_id: str = None):
         # Initialize Bedrock client
         self.bedrock_runtime = boto3.client(
             'bedrock-runtime',
             region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
         )
         
-        # Create specialized agents
+        # Create session manager for persistence
+        self.session_manager = None
+        if session_id:
+            self.session_manager = S3SessionManager(
+                session_id=session_id,
+                bucket=os.environ.get('SESSION_BUCKET', 'mbpp-chatbot-sessions'),
+                prefix='workflows/',
+                region_name=os.environ.get('BEDROCK_REGION', 'us-east-1')
+            )
+        
+        # Create specialized agents with session management
         self.workflow_agent = Agent(
             system_prompt="""You are an MBPP incident and complaint management assistant. Communicate ONLY in English.
             
@@ -43,7 +54,8 @@ class MBPPAgent:
             
             Always communicate in English. Be polite, clear, and guide users step-by-step.""",
             tools=[mbpp_workflow],
-            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            session_manager=self.session_manager
         )
         
         self.rag_agent = Agent(
@@ -51,11 +63,15 @@ class MBPPAgent:
             Help users find information from MBPP documents and answer general questions.
             Provide accurate, helpful responses in English only.
             If you don't know something, say so clearly.""",
-            model="anthropic.claude-3-5-sonnet-20240620-v1:0"
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            session_manager=self.session_manager
         )
         
-        # Track active workflows
-        self.active_workflows = {}
+        # Track active workflows in agent state (persisted via session manager)
+        if self.session_manager:
+            self.active_workflows = self.workflow_agent.state.get('active_workflows', {})
+        else:
+            self.active_workflows = {}
     
     def process_message(
         self,
@@ -78,15 +94,27 @@ class MBPPAgent:
         Returns:
             Response dictionary
         """
+        # Restore workflow state from agent state
+        if self.session_manager:
+            self.active_workflows = self.workflow_agent.state.get('active_workflows', {})
+        
         # Check if there's an active workflow for this session
         if session_id in self.active_workflows:
-            return self._continue_workflow(session_id, message, has_image, image_data, location)
+            result = self._continue_workflow(session_id, message, has_image, image_data, location)
+            # Persist workflow state
+            if self.session_manager:
+                self.workflow_agent.state['active_workflows'] = self.active_workflows
+            return result
         
         # Detect if this is a workflow trigger or RAG question
         workflow_type = self._detect_intent(message, has_image)
         
         if workflow_type in ["complaint", "text_incident", "image_incident"]:
-            return self._start_workflow(session_id, workflow_type, message, has_image, image_data)
+            result = self._start_workflow(session_id, workflow_type, message, has_image, image_data)
+            # Persist workflow state
+            if self.session_manager:
+                self.workflow_agent.state['active_workflows'] = self.active_workflows
+            return result
         else:
             return self._handle_rag_query(message, session_id)
     
@@ -542,8 +570,8 @@ def lambda_handler(event, context):
         image_data = body.get('imageData')
         location = body.get('location')
         
-        # Initialize agent
-        agent = MBPPAgent()
+        # Initialize agent with session ID
+        agent = MBPPAgent(session_id=session_id)
         
         # Process message
         result = agent.process_message(

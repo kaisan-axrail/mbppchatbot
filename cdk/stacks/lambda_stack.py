@@ -9,8 +9,10 @@ from aws_cdk import (
     aws_events as events,
     aws_events_targets as targets,
     aws_secretsmanager as secretsmanager,
+    aws_s3 as s3,
     Duration,
-    BundlingOptions
+    BundlingOptions,
+    RemovalPolicy
 )
 from constructs import Construct
 from cdk_constructs.mcp_server import McpServerConstruct
@@ -29,6 +31,22 @@ class LambdaStack(Stack):
         self.analytics_table = analytics_table
         self.events_table = events_table
         self.processed_bucket = processed_bucket
+        
+        # Create S3 bucket for session persistence
+        self.session_bucket = s3.Bucket(
+            self, "SessionBucket",
+            bucket_name=f"mbpp-chatbot-sessions-{self.account}",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.RETAIN,
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    id="DeleteOldSessions",
+                    expiration=Duration.days(7),
+                    enabled=True
+                )
+            ]
+        )
         
         # Create Secrets Manager secret
         self.api_secrets = secretsmanager.Secret(
@@ -127,7 +145,14 @@ class LambdaStack(Stack):
                     statements=[
                         iam.PolicyStatement(
                             actions=["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
-                            resources=[f"arn:aws:s3:::mbpp-incident-images-{self.account}/*"]
+                            resources=[
+                                f"arn:aws:s3:::mbpp-incident-images-{self.account}/*",
+                                f"{self.session_bucket.bucket_arn}/*"
+                            ]
+                        ),
+                        iam.PolicyStatement(
+                            actions=["s3:ListBucket"],
+                            resources=[self.session_bucket.bucket_arn]
                         )
                     ]
                 ),
@@ -185,6 +210,7 @@ class LambdaStack(Stack):
                 "REPORTS_TABLE": "mbpp-reports",
                 "EVENTS_TABLE": "mbpp-events",
                 "IMAGES_BUCKET": f"mbpp-incident-images-{self.account}",
+                "SESSION_BUCKET": self.session_bucket.bucket_name,
                 "SECRETS_ARN": self.api_secrets.secret_arn,
                 "MCP_SERVER_ARN": "",  # Will be updated after MCP server is created
                 "BEDROCK_REGION": self.region,
