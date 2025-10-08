@@ -26,16 +26,19 @@ class PipelineStack(Stack):
                  **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
+        source = pipelines.CodePipelineSource.connection(
+            repo_string=github_repo,
+            branch=github_branch,
+            connection_arn=codestar_connection_arn,
+            trigger_on_push=True
+        )
+        
         pipeline = pipelines.CodePipeline(
             self, "Pipeline",
             pipeline_name="mbpp-chatbot-pipeline",
             synth=pipelines.ShellStep(
                 "Synth",
-                input=pipelines.CodePipelineSource.connection(
-                    repo_string=github_repo,
-                    branch=github_branch,
-                    connection_arn=codestar_connection_arn
-                ),
+                input=source,
                 commands=[
                     "cd cdk",
                     "pip install -r requirements.txt",
