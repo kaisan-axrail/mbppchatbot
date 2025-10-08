@@ -560,37 +560,8 @@ If location is not mentioned, use empty string for location."""
         os.environ['AWS_REGION'] = os.environ.get('BEDROCK_REGION', 'us-east-1')
         os.environ['MIN_SCORE'] = '0.6'
         
-        # Call retrieve tool directly
-        from strands_tools.retrieve import retrieve
-        
-        tool_input = {
-            "toolUseId": "retrieve-1",
-            "input": {
-                "text": message,
-                "numberOfResults": 5,
-                "score": 0.6
-            }
-        }
-        
-        retrieve_result = retrieve(tool_input)
-        
-        # Check if results were found
-        if retrieve_result.get('status') == 'success':
-            content = retrieve_result.get('content', [{}])[0].get('text', '')
-            
-            # Use agent to format the answer based on retrieved content
-            prompt = f"""Based on the following information from the MBPP knowledge base, answer the user's question.
-
-User Question: {message}
-
-Retrieved Information:
-{content}
-
-Provide a clear, helpful answer in English based on the retrieved information. If the information doesn't answer the question, say so."""
-            
-            response = self.rag_agent(prompt)
-        else:
-            response = "I don't have information about that in the MBPP knowledge base."
+        # Let the agent call retrieve tool itself
+        response = self.rag_agent(message)
         
         return {
             "type": "rag",

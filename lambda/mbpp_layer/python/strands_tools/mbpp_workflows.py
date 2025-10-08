@@ -109,7 +109,7 @@ class MBPPWorkflowManager:
                 image_data = image_data.split(',')[1]
             
             image_bytes = base64.b64decode(image_data)
-            key = f"incidents/{ticket_number}/{uuid.uuid4()}.jpg"
+            key = f"incidents/{uuid.uuid4()}.jpg"
             
             self.s3.put_object(
                 Bucket=self.images_bucket,
