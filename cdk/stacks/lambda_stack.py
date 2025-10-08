@@ -23,6 +23,7 @@ class LambdaStack(Stack):
     
     def __init__(self, scope: Construct, construct_id: str,
                  sessions_table, conversations_table, analytics_table, events_table,
+                 reports_table=None, workflow_events_table=None, images_bucket=None,
                  processed_bucket=None, knowledge_base_id=None, shared_layer=None, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
         
@@ -30,6 +31,9 @@ class LambdaStack(Stack):
         self.conversations_table = conversations_table
         self.analytics_table = analytics_table
         self.events_table = events_table
+        self.reports_table = reports_table
+        self.workflow_events_table = workflow_events_table
+        self.images_bucket = images_bucket
         self.processed_bucket = processed_bucket
         
         # Create S3 bucket for session persistence
@@ -83,10 +87,11 @@ class LambdaStack(Stack):
                                 f"{self.sessions_table.table_arn}/index/*",
                                 f"{self.conversations_table.table_arn}/index/*",
                                 f"{self.analytics_table.table_arn}/index/*",
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-websocket-connections",
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-reports",
-                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-events"
-                            ]
+                                f"arn:aws:dynamodb:{self.region}:{self.account}:table/mbpp-websocket-connections"
+                            ] + (
+                                [self.reports_table.table_arn, self.workflow_events_table.table_arn] 
+                                if self.reports_table and self.workflow_events_table else []
+                            )
                         )
                     ]
                 ),
@@ -147,13 +152,16 @@ class LambdaStack(Stack):
                         iam.PolicyStatement(
                             actions=["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
                             resources=[
-                                f"arn:aws:s3:::mbpp-incident-images-{self.account}/*",
                                 f"{self.session_bucket.bucket_arn}/*"
-                            ]
+                            ] + (
+                                [f"{self.images_bucket.bucket_arn}/*"] if self.images_bucket else []
+                            )
                         ),
                         iam.PolicyStatement(
                             actions=["s3:ListBucket"],
-                            resources=[self.session_bucket.bucket_arn]
+                            resources=[self.session_bucket.bucket_arn] + (
+                                [self.images_bucket.bucket_arn] if self.images_bucket else []
+                            )
                         )
                     ]
                 ),
@@ -208,9 +216,9 @@ class LambdaStack(Stack):
                 "CONVERSATIONS_TABLE": self.conversations_table.table_name,
                 "CONVERSATION_HISTORY_TABLE": "mbpp-conversation-history",
                 "ANALYTICS_TABLE": self.analytics_table.table_name,
-                "REPORTS_TABLE": "mbpp-reports",
-                "EVENTS_TABLE": "mbpp-events",
-                "IMAGES_BUCKET": f"mbpp-incident-images-{self.account}",
+                "REPORTS_TABLE": self.reports_table.table_name if self.reports_table else "mbpp-reports",
+                "EVENTS_TABLE": self.workflow_events_table.table_name if self.workflow_events_table else "mbpp-events",
+                "IMAGES_BUCKET": self.images_bucket.bucket_name if self.images_bucket else f"mbpp-incident-images-{self.account}",
                 "SESSION_BUCKET": self.session_bucket.bucket_name,
                 "SECRETS_ARN": self.api_secrets.secret_arn,
                 "MCP_SERVER_ARN": "",  # Will be updated after MCP server is created

@@ -15,8 +15,14 @@ class MBPPWorkflowManager:
         self.workflows = {}
         self.dynamodb = boto3.resource('dynamodb')
         self.s3 = boto3.client('s3')
-        self.reports_table = self.dynamodb.Table(os.environ.get('REPORTS_TABLE', 'mbpp-reports'))
-        self.events_table = self.dynamodb.Table(os.environ.get('EVENTS_TABLE', 'mbpp-events'))
+        
+        reports_table_name = os.environ.get('REPORTS_TABLE', 'mbpp-reports')
+        events_table_name = os.environ.get('EVENTS_TABLE', 'mbpp-events')
+        
+        print(f"Initializing MBPPWorkflowManager with tables: {reports_table_name}, {events_table_name}")
+        
+        self.reports_table = self.dynamodb.Table(reports_table_name)
+        self.events_table = self.dynamodb.Table(events_table_name)
         self.images_bucket = os.environ.get('IMAGES_BUCKET', 'mbpp-incident-images')
     
     def classify_incident(self, description: str) -> Dict[str, str]:
@@ -135,13 +141,17 @@ class MBPPWorkflowManager:
             if ticket.get('image_url'):
                 item['image_url'] = ticket['image_url']
             
-            print(f"Saving to DynamoDB table: {self.reports_table.table_name}")
-            print(f"Item to save: {item}")
-            self.reports_table.put_item(Item=item)
-            print(f"Successfully saved ticket {ticket['ticket_number']} to DynamoDB")
+            print(f"[SAVE_REPORT] Table: {self.reports_table.table_name}")
+            print(f"[SAVE_REPORT] Item: {json.dumps(item, default=str)}")
+            
+            response = self.reports_table.put_item(Item=item)
+            print(f"[SAVE_REPORT] DynamoDB Response: {json.dumps(response, default=str)}")
+            print(f"[SAVE_REPORT] SUCCESS - Ticket {ticket['ticket_number']} saved")
             return True
         except Exception as e:
-            print(f"Error saving report to DynamoDB: {e}")
+            print(f"[SAVE_REPORT] ERROR: {str(e)}")
+            print(f"[SAVE_REPORT] Table name: {self.reports_table.table_name}")
+            print(f"[SAVE_REPORT] Ticket data: {json.dumps(ticket, default=str)}")
             import traceback
             traceback.print_exc()
             return False

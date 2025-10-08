@@ -84,18 +84,20 @@ class ApplicationStage(Stage):
         
         database_stack = DatabaseStack(self, "Database")
         storage_stack = StorageStack(self, "Storage")
+        mbpp_stack = MBPPWorkflowStack(self, "Workflow")
         
         lambda_stack = LambdaStack(
             self, "Lambda",
             sessions_table=database_stack.sessions_table,
             conversations_table=database_stack.conversations_table,
             analytics_table=database_stack.analytics_table,
-            events_table=database_stack.events_table
+            events_table=database_stack.events_table,
+            reports_table=mbpp_stack.reports_table,
+            workflow_events_table=mbpp_stack.events_table,
+            images_bucket=mbpp_stack.images_bucket
         )
         
         api_stack = ApiStack(
             self, "Api",
             websocket_handler=lambda_stack.websocket_handler
         )
-        
-        mbpp_stack = MBPPWorkflowStack(self, "Workflow")

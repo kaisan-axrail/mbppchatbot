@@ -136,6 +136,11 @@ class MBPPWorkflowStack(Stack):
             integration=lambda_integration
         )
         
+        # Export tables and bucket for use by other stacks
+        self.reports_table = reports_table
+        self.events_table = events_table
+        self.images_bucket = images_bucket
+        
         # Outputs
         CfnOutput(self, "WorkflowApiEndpoint", value=http_api.url or "", description="MBPP Workflow API Endpoint")
         CfnOutput(self, "WorkflowAgentLambdaArn", value=workflow_agent_lambda.function_arn, description="Lambda ARN")
