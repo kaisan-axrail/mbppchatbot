@@ -342,10 +342,19 @@ class MBPPAgent:
             collected_data['location'] = message
             workflow_context['current_step'] = 3
             
-            # Use AI to generate contextual hazard question
+            # Use AI to generate contextual hazard question with image context if available
             desc = collected_data['description']
+            img_data = collected_data.get('image_data')
+            
             try:
-                prompt = f"""Based on this incident: "{desc}"
+                if img_data:
+                    # Include image in prompt for better context
+                    prompt_content = [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_data}},
+                        {"type": "text", "text": f"Based on this image and description: \"{desc}\"\n\nGenerate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.\nExamples:\n- \"Is it blocking the main road?\"\n- \"Is it causing immediate danger?\"\n- \"Is access blocked?\"\n\nRespond with ONLY the question, nothing else."}
+                    ]
+                else:
+                    prompt_content = f"""Based on this incident: "{desc}"
 
 Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
 Examples:
@@ -360,7 +369,7 @@ Respond with ONLY the question, nothing else."""
                     body=json.dumps({
                         "anthropic_version": "bedrock-2023-05-31",
                         "max_tokens": 50,
-                        "messages": [{"role": "user", "content": prompt}]
+                        "messages": [{"role": "user", "content": prompt_content}]
                     })
                 )
                 result = json.loads(response['body'].read())
