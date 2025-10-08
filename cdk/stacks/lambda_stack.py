@@ -145,7 +145,7 @@ class LambdaStack(Stack):
         # Create MBPP Workflow Layer
         mbpp_workflow_layer = _lambda.LayerVersion(
             self, "MBPPWorkflowLayer",
-            code=_lambda.Code.from_asset("../lambda/mcp_server"),
+            code=_lambda.Code.from_asset("../lambda/mbpp_layer"),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
             description="MBPP Workflow Agent with Strands"
         )

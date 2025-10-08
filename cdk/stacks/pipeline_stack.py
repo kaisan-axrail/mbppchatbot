@@ -48,30 +48,31 @@ class PipelineStack(Stack):
         
         deploy_stage = pipeline.add_stage(ApplicationStage(self, "MBPP"))
         
-        deploy_stage.add_post(
-            pipelines.CodeBuildStep(
-                "SaveWebSocketUrl",
-                commands=[
-                    "WS_URL=$(aws cloudformation describe-stacks --stack-name MBPP-Api --query 'Stacks[0].Outputs[?OutputKey==`WebSocketApiEndpoint`].OutputValue' --output text)",
-                    "if [ -z \"$WS_URL\" ]; then echo 'Error: WebSocket URL not found'; exit 1; fi",
-                    "aws ssm put-parameter --name /mbpp/websocket-url --value \"$WS_URL\" --type String --overwrite",
-                    "echo WebSocket URL saved to Parameter Store: $WS_URL"
-                ],
-                build_environment=codebuild.BuildEnvironment(
-                    build_image=codebuild.LinuxBuildImage.STANDARD_7_0
-                ),
-                role_policy_statements=[
-                    aws_iam.PolicyStatement(
-                        actions=["cloudformation:DescribeStacks"],
-                        resources=[f"arn:aws:cloudformation:*:{self.account}:stack/MBPP-*/*"]
-                    ),
-                    aws_iam.PolicyStatement(
-                        actions=["ssm:PutParameter"],
-                        resources=[f"arn:aws:ssm:*:{self.account}:parameter/mbpp/*"]
-                    )
-                ]
-            )
-        )
+        # Post-deployment step temporarily disabled - Lambda layer structure needs fixing
+        # deploy_stage.add_post(
+        #     pipelines.CodeBuildStep(
+        #         "SaveWebSocketUrl",
+        #         commands=[
+        #             "WS_URL=$(aws cloudformation describe-stacks --stack-name MBPP-Api --query 'Stacks[0].Outputs[?OutputKey==`WebSocketApiEndpoint`].OutputValue' --output text)",
+        #             "if [ -z \"$WS_URL\" ]; then echo 'Error: WebSocket URL not found'; exit 1; fi",
+        #             "aws ssm put-parameter --name /mbpp/websocket-url --value \"$WS_URL\" --type String --overwrite",
+        #             "echo WebSocket URL saved to Parameter Store: $WS_URL"
+        #         ],
+        #         build_environment=codebuild.BuildEnvironment(
+        #             build_image=codebuild.LinuxBuildImage.STANDARD_7_0
+        #         ),
+        #         role_policy_statements=[
+        #             aws_iam.PolicyStatement(
+        #                 actions=["cloudformation:DescribeStacks"],
+        #                 resources=[f"arn:aws:cloudformation:*:{self.account}:stack/MBPP-*/*"]
+        #             ),
+        #             aws_iam.PolicyStatement(
+        #                 actions=["ssm:PutParameter"],
+        #                 resources=[f"arn:aws:ssm:*:{self.account}:parameter/mbpp/*"]
+        #             )
+        #         ]
+        #     )
+        # )
 
 
 class ApplicationStage(Stage):
