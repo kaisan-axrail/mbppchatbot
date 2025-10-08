@@ -151,11 +151,22 @@ class LambdaStack(Stack):
         )
         
         # Create WebSocket Layer with shared module and dependencies
+        # Layer includes: boto3, pydantic, pydantic-core, shared module
         websocket_layer = _lambda.LayerVersion(
             self, "WebSocketLayer",
-            code=_lambda.Code.from_asset("../lambda/websocket_layer"),
+            code=_lambda.Code.from_asset(
+                "../lambda/websocket_layer",
+                bundling=BundlingOptions(
+                    image=_lambda.Runtime.PYTHON_3_11.bundling_image,
+                    command=[
+                        "bash", "-c",
+                        "pip install -r requirements.txt -t /asset-output/python && "
+                        "cp -r python/shared /asset-output/python/"
+                    ]
+                )
+            ),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
-            description="WebSocket handler dependencies and shared module"
+            description="WebSocket: boto3, pydantic, shared module"
         )
         
         # Create WebSocket handler Lambda function
