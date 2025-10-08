@@ -57,15 +57,17 @@ class MBPPAgent:
         self.rag_agent = Agent(
             system_prompt="""You are an MBPP (Majlis Bandaraya Pulau Pinang) knowledge assistant. Communicate ONLY in English.
             
-            IMPORTANT: For ANY question the user asks, ALWAYS use the retrieve tool to search the knowledge base first.
-            The knowledge base contains information about MBPP services, events, programs, policies, and general information.
+            CRITICAL INSTRUCTION: You MUST use the retrieve tool for EVERY user question before answering.
             
-            Steps for every question:
-            1. Use retrieve tool to search the knowledge base
-            2. If relevant information is found, provide a clear answer based on the retrieved content
-            3. If no relevant information is found, politely inform the user that the information is not available in the knowledge base
+            Process:
+            1. User asks a question
+            2. IMMEDIATELY call retrieve tool with the user's question as the text parameter
+            3. Wait for retrieve results
+            4. If results found: Answer based on the retrieved information
+            5. If no results found: Say "I don't have information about that in the MBPP knowledge base."
             
-            Provide accurate, helpful responses in English only.""",
+            NEVER answer without calling retrieve first.
+            The knowledge base contains MBPP services, events, programs, policies, and procedures.""",
             tools=[retrieve],
             model="anthropic.claude-3-5-sonnet-20240620-v1:0"
         )
