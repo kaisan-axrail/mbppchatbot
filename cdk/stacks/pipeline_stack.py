@@ -94,7 +94,8 @@ class ApplicationStage(Stage):
             events_table=database_stack.events_table,
             reports_table=mbpp_stack.reports_table,
             workflow_events_table=mbpp_stack.events_table,
-            images_bucket=mbpp_stack.images_bucket
+            images_bucket=mbpp_stack.images_bucket,
+            knowledge_base_id="U6EAI0DHJC"  # mbpp-faq-knowledgebase
         )
         
         api_stack = ApiStack(

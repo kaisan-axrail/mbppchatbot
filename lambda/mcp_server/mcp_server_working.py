@@ -237,7 +237,7 @@ class MCPChatbotServer:
     
     async def search_documents(self, query: str, limit: int = 5, threshold: float = 0.7) -> Dict[str, Any]:
         """
-        Search documents using vector similarity.
+        Search documents using Bedrock Knowledge Base.
         
         Args:
             query: Search query text
@@ -245,44 +245,61 @@ class MCPChatbotServer:
             threshold: Minimum similarity score
             
         Returns:
-            Search results
+            Search results from knowledge base
         """
-        self.logger.info(f"Searching documents for query: {query}")
+        self.logger.info(f"Searching knowledge base for query: {query}")
         
         try:
-            # Import vector search module
-            from vector_search import search_embedded_documents
+            # Get knowledge base ID from environment
+            knowledge_base_id = os.environ.get('KNOWLEDGE_BASE_ID', '')
             
-            # Get processed bucket from environment
-            processed_bucket = os.environ.get('PROCESSED_BUCKET', '')
-            
-            if not processed_bucket:
-                self.logger.warning("PROCESSED_BUCKET not configured, returning empty results")
+            if not knowledge_base_id:
+                self.logger.warning("KNOWLEDGE_BASE_ID not configured")
                 return {
-                    "success": True,
+                    "success": False,
                     "results": [],
                     "query": query,
                     "total_results": 0,
-                    "message": "No document storage configured"
+                    "error": "Knowledge base not configured"
                 }
             
-            # Perform vector similarity search
-            results = search_embedded_documents(query, processed_bucket, limit)
+            # Initialize Bedrock Agent Runtime client
+            bedrock_agent = boto3.client('bedrock-agent-runtime')
             
-            # Filter by threshold
-            filtered_results = [r for r in results if r['score'] >= threshold]
+            # Retrieve from knowledge base
+            response = bedrock_agent.retrieve(
+                knowledgeBaseId=knowledge_base_id,
+                retrievalQuery={'text': query},
+                retrievalConfiguration={
+                    'vectorSearchConfiguration': {
+                        'numberOfResults': limit
+                    }
+                }
+            )
             
-            self.logger.info(f"Found {len(filtered_results)} documents matching query")
+            # Format results
+            results = []
+            for item in response.get('retrievalResults', []):
+                score = item.get('score', 0.0)
+                if score >= threshold:
+                    results.append({
+                        'content': item.get('content', {}).get('text', ''),
+                        'score': float(score),
+                        'source': item.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                        'metadata': item.get('metadata', {})
+                    })
+            
+            self.logger.info(f"Found {len(results)} documents from knowledge base")
             
             return {
                 "success": True,
-                "results": filtered_results,
+                "results": results,
                 "query": query,
-                "total_results": len(filtered_results)
+                "total_results": len(results)
             }
             
         except Exception as e:
-            self.logger.error(f"Error searching documents: {str(e)}")
+            self.logger.error(f"Error searching knowledge base: {str(e)}")
             return {
                 "success": False,
                 "results": [],
