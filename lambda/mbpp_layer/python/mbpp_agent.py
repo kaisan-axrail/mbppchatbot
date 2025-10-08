@@ -320,7 +320,10 @@ If they provided description, extract it and ask for location. If they provided 
                 "workflow_id": workflow_id,
                 "response": preview,
                 "session_id": session_id,
-                "quick_replies": ["Yes, submit", "No, start over"]
+                "quick_replies": [
+                    {"text": "✅ Yes, submit", "value": "yes"},
+                    {"text": "❌ No, start over", "value": "no"}
+                ]
             }
         else:
             # Final confirmation
