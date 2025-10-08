@@ -225,12 +225,38 @@ class MBPPAgent:
         return "start"
     
     def _extract_workflow_data(self, workflow_type: str, step: int, message: str, context: dict) -> dict:
-        """Extract data from user message for workflow"""
+        """Extract data from user message using AI"""
         data = {}
         
         if workflow_type == "text_incident":
             if step == 1:
-                data = {"description": message, "image": context["data"].get("image_data")}
+                # Use AI to extract description and location
+                extraction_prompt = f"""Extract the incident description and location from this message:
+"{message}"
+
+Respond ONLY with JSON format:
+{{"description": "what happened", "location": "where it happened"}}
+
+If location is not mentioned, use empty string for location."""
+                
+                try:
+                    response = self.bedrock_runtime.invoke_model(
+                        modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                        body=json.dumps({
+                            "anthropic_version": "bedrock-2023-05-31",
+                            "max_tokens": 200,
+                            "messages": [{"role": "user", "content": extraction_prompt}]
+                        })
+                    )
+                    result = json.loads(response['body'].read())
+                    extracted = json.loads(result['content'][0]['text'])
+                    data = {
+                        "description": extracted.get("description", message),
+                        "location": extracted.get("location", ""),
+                        "image": context["data"].get("image_data")
+                    }
+                except:
+                    data = {"description": message, "location": "", "image": context["data"].get("image_data")}
             elif step == 2:
                 data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
             elif step == 3:
@@ -241,9 +267,32 @@ class MBPPAgent:
             if step == 1:
                 data = {"confirmation": "yes" if "yes" in message.lower() else "no"}
             elif step == 2:
-                # Extract description and location from message
-                parts = message.split(',')
-                data = {"description": parts[0].strip() if parts else message, "location": ','.join(parts[1:]).strip() if len(parts) > 1 else ""}
+                # Use AI to extract description and location
+                extraction_prompt = f"""Extract the incident description and location from this message:
+"{message}"
+
+Respond ONLY with JSON format:
+{{"description": "what happened", "location": "where it happened"}}
+
+If location is not mentioned, use empty string for location."""
+                
+                try:
+                    response = self.bedrock_runtime.invoke_model(
+                        modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                        body=json.dumps({
+                            "anthropic_version": "bedrock-2023-05-31",
+                            "max_tokens": 200,
+                            "messages": [{"role": "user", "content": extraction_prompt}]
+                        })
+                    )
+                    result = json.loads(response['body'].read())
+                    extracted = json.loads(result['content'][0]['text'])
+                    data = {
+                        "description": extracted.get("description", message),
+                        "location": extracted.get("location", "")
+                    }
+                except:
+                    data = {"description": message, "location": ""}
             elif step == 3:
                 data = {"hazard_confirmation": "yes" in message.lower()}
         

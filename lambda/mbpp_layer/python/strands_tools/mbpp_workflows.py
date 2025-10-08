@@ -213,12 +213,17 @@ class MBPPWorkflowManager:
             workflow["current_step"] = 2
             workflow["data"]["description"] = data.get("description")
             workflow["data"]["image"] = data.get("image")
+            if data.get("location"):
+                workflow["data"]["location"] = data.get("location")
             return {"status": "success", "step": 2, "message": "Can you confirm you would like to report an incident?", "options": ["Yes, report an incident", "Not an incident (Service Complaint / Feedback)"], "workflow_id": workflow_id}
         
         elif action == "step3_confirm":
             workflow = self.workflows.get(workflow_id)
             workflow["current_step"] = 3
             workflow["data"]["confirmation"] = data.get("confirmation")
+            if workflow["data"].get("location"):
+                workflow["current_step"] = 4
+                return {"status": "success", "step": 4, "message": "Could you confirm if its blocking the road and causing hazard?", "workflow_id": workflow_id}
             return {"status": "success", "step": 3, "message": "Where is this? You can share WhatsApp live location, drop a GPS pin, or type the address.", "workflow_id": workflow_id}
         
         elif action == "step4_location":
