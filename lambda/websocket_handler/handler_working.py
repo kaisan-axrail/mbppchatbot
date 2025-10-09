@@ -28,6 +28,52 @@ logger = logging.getLogger(__name__)
 # Global variable to cache WebSocket endpoint
 _websocket_endpoint = None
 
+# DynamoDB client
+dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION', 'ap-southeast-1'))
+
+def log_conversation(session_id, user_message, bot_response):
+    """Log conversation to DynamoDB tables"""
+    try:
+        import uuid
+        
+        timestamp = datetime.utcnow().isoformat() + 'Z'
+        message_id = str(uuid.uuid4())
+        
+        # Log to conversation history table
+        history_table = dynamodb.Table(os.environ.get('CONVERSATION_HISTORY_TABLE', 'mbpp-conversation-history'))
+        
+        # User message
+        history_table.put_item(Item={
+            'sessionId': session_id,
+            'messageId': f"{message_id}-user",
+            'timestamp': timestamp,
+            'message_type': 'user',
+            'content': user_message
+        })
+        
+        # Bot response
+        history_table.put_item(Item={
+            'sessionId': session_id,
+            'messageId': f"{message_id}-bot",
+            'timestamp': timestamp,
+            'message_type': 'assistant',
+            'content': bot_response
+        })
+        
+        # Log to conversations table (metadata)
+        conversations_table = dynamodb.Table(os.environ.get('CONVERSATIONS_TABLE', 'mbpp-conversations'))
+        conversations_table.put_item(Item={
+            'sessionId': session_id,
+            'lastMessageId': message_id,
+            'lastTimestamp': timestamp,
+            'lastUserMessage': user_message[:100],  # Store preview
+            'lastBotResponse': bot_response[:100]   # Store preview
+        })
+        
+        logger.info(f"Logged conversation for session {session_id}")
+    except Exception as e:
+        logger.warning(f"Failed to log conversation: {str(e)}")
+
 def lambda_handler(event, context):
     """Main Lambda handler for WebSocket events."""
     global _websocket_endpoint
@@ -97,6 +143,9 @@ def handle_message(connection_id, event):
         
         # Use the actual Nova Pro chatbot engine
         response_data = process_with_nova_pro(user_message, session_id, has_image, image_data)
+        
+        # Log conversation
+        log_conversation(session_id, user_message, response_data.get('content', ''))
         
         # Send response back
         send_message_to_connection(connection_id, response_data)
