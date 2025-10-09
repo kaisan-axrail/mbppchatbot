@@ -268,6 +268,13 @@ class MBPPAgent:
                 from strands_tools.mbpp_workflows import MBPPWorkflowManager
                 manager = MBPPWorkflowManager()
                 ticket = collected_data['ticket_details']
+                
+                # Save image to S3 if present
+                if collected_data.get('image_data'):
+                    image_url = manager._save_image(collected_data['image_data'], ticket['ticket_number'])
+                    if image_url:
+                        ticket['image_url'] = image_url
+                
                 manager._save_report(ticket)
                 manager._create_event('complaint_created', ticket['ticket_number'], collected_data)
                 
@@ -292,14 +299,15 @@ class MBPPAgent:
                     "type": "workflow",
                     "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
-                    "response": "Please describe what happened.",
+                    "response": "Please describe what happened and tell us the location. You may also share your live location to make it easier.\n\n(e.g. I want to complain about a pothole at Jalan Penang, 10000, Georgetown)",
                     "session_id": session_id
                 }
             else:
                 # User selected service complaint - switch to complaint workflow
+                image_data = collected_data.get('image_data') or workflow_context['data'].get('image_data')
                 workflow_context['workflow_type'] = 'complaint'
                 workflow_context['current_step'] = 1
-                workflow_context['data'] = {}
+                workflow_context['data'] = {'image_data': image_data, 'has_image': True}
                 return {
                     "type": "workflow",
                     "workflow_type": "complaint",
@@ -308,43 +316,102 @@ class MBPPAgent:
                     "session_id": session_id
                 }
         
-        # Update workflow data based on what field user is providing
-        if 'description' not in collected_data:
-            collected_data['description'] = message
+        # Handle text_incident workflow step 1: image upload after text trigger
+        if workflow_type == 'text_incident' and current_step == 1 and has_image and image_data:
+            collected_data['image_data'] = image_data
+            collected_data['has_image'] = True
+            workflow_context['current_step'] = 2
+            return {
+                "type": "workflow",
+                "workflow_type": "text_incident",
+                "workflow_id": workflow_id,
+                "response": "Please describe what happened and tell us the location. You may also share your live location to make it easier.\n\n(e.g. I want to complain about a pothole at Jalan Penang, 10000, Georgetown)",
+                "session_id": session_id
+            }
+        
+        # Handle combined description+location for both text_incident and image_incident
+        if 'description' not in collected_data and 'location' not in collected_data:
+            # Use AI to extract description and location from combined message
+            extraction_prompt = f"""Extract the incident description and location from this message:
+"{message}"
+
+Respond ONLY with JSON format:
+{{"description": "what happened", "location": "where it happened"}}
+
+If location is not mentioned, use empty string for location."""
             
-            # Check if image was provided - switch to image_incident workflow
-            if has_image and image_data:
-                collected_data['image_data'] = image_data
-                collected_data['has_image'] = True
-                workflow_context['workflow_type'] = 'image_incident'
-                workflow_context['current_step'] = 0
+            try:
+                response = self.bedrock_runtime.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 200,
+                        "messages": [{"role": "user", "content": extraction_prompt}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                extracted = json.loads(result['content'][0]['text'])
+                collected_data['description'] = extracted.get("description", message)
+                collected_data['location'] = extracted.get("location", "")
+            except Exception as e:
+                print(f"AI extraction error: {e}")
+                collected_data['description'] = message
+                collected_data['location'] = ""
+            
+            workflow_context['current_step'] = 3
+            
+            # If location is empty, ask for it
+            if not collected_data['location']:
                 return {
                     "type": "workflow",
-                    "workflow_type": "image_incident",
+                    "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
-                    "response": "Image detected. Can you confirm you would like to report an incident?",
-                    "session_id": session_id,
-                    "quick_replies": [
-                        {"text": "Yes, report an incident", "value": "yes_incident"},
-                        {"text": "Not an incident (Service Complaint / Feedback)", "value": "no_complaint"}
-                    ]
+                    "response": "What is the exact location?",
+                    "session_id": session_id
                 }
             
-            workflow_context['current_step'] = 2
+            # Use AI to generate hazard question based on description
+            desc = collected_data['description']
+            try:
+                prompt_content = f"""Based on this incident: "{desc}"
+
+Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
+Examples:
+- "Is it blocking the main road?"
+- "Is it causing immediate danger?"
+- "Is access blocked?"
+
+Respond with ONLY the question, nothing else."""
+                
+                response = self.bedrock_runtime.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 50,
+                        "messages": [{"role": "user", "content": prompt_content}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                hazard_q = result['content'][0]['text'].strip()
+            except Exception as e:
+                print(f"AI hazard question error: {e}")
+                hazard_q = "Is it blocking the main road?"
+            
             return {
                 "type": "workflow",
                 "workflow_type": workflow_type,
                 "workflow_id": workflow_id,
-                "response": "What is the exact location?",
-                "session_id": session_id
+                "response": hazard_q,
+                "session_id": session_id,
+                "quick_replies": ["Yes", "No"]
             }
-        elif 'location' not in collected_data:
+        elif 'location' not in collected_data or not collected_data['location']:
+            # User provided location after being asked
             collected_data['location'] = message
             workflow_context['current_step'] = 3
             
-            # Use AI to generate contextual hazard question based on description only
+            # Use AI to generate hazard question based on description
             desc = collected_data['description']
-            
             try:
                 prompt_content = f"""Based on this incident: "{desc}"
 

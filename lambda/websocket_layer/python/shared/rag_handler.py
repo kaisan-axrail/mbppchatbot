@@ -73,7 +73,7 @@ class MCPClient:
     
     @retry_with_backoff(
         config=MCP_RETRY_CONFIG,
-        service_name="mcp_search"
+        service_name="knowledge_base_search"
     )
     async def search_documents(
         self, 
@@ -82,7 +82,7 @@ class MCPClient:
         threshold: float = 0.7
     ) -> List[Dict[str, Any]]:
         """
-        Search documents using MCP server.
+        Search documents using Bedrock Knowledge Base.
         
         Args:
             query: Search query text
@@ -93,92 +93,119 @@ class MCPClient:
             List of document search results
             
         Raises:
-            RAGHandlerError: If MCP call fails
+            RAGHandlerError: If Knowledge Base search fails
         """
         try:
-            self.logger.info(f"Searching documents via MCP: {query[:50]}...")
+            import os
+            import boto3
             
-            # Prepare MCP request
-            mcp_request = {
-                'tool': 'search_documents',
-                'parameters': {
-                    'query': query,
-                    'limit': limit,
-                    'threshold': threshold
+            self.logger.info(f"Searching Knowledge Base: {query[:50]}...")
+            
+            knowledge_base_id = os.environ.get('KNOWLEDGE_BASE_ID')
+            if not knowledge_base_id:
+                self.logger.warning("Knowledge Base ID not configured, using fallback")
+                return await self._fallback_search(query, limit)
+            
+            # Use Bedrock Knowledge Base for retrieval
+            bedrock_agent_client = boto3.client('bedrock-agent-runtime')
+            
+            response = bedrock_agent_client.retrieve(
+                knowledgeBaseId=knowledge_base_id,
+                retrievalQuery={'text': query},
+                retrievalConfiguration={
+                    'vectorSearchConfiguration': {
+                        'numberOfResults': limit
+                    }
                 }
-            }
+            )
             
-            # Call MCP server (placeholder implementation)
-            # In production, this would call the actual MCP server
-            response = await self._call_mcp_server(mcp_request)
+            # Format results
+            results = []
+            for result in response.get('retrievalResults', []):
+                content = result.get('content', {})
+                metadata = result.get('metadata', {})
+                score = result.get('score', 0.0)
+                
+                if score >= threshold:
+                    results.append({
+                        'id': metadata.get('source', f'kb_result_{len(results)}'),
+                        'content': content.get('text', ''),
+                        'source': metadata.get('source', 'Knowledge Base'),
+                        'score': score
+                    })
             
-            if not response.get('success', False):
-                error_msg = response.get('error', {}).get('message', 'Unknown MCP error')
-                raise McpCommunicationError(f"MCP search failed: {error_msg}")
-            
-            results = response.get('result', [])
-            self.logger.info(f"MCP search returned {len(results)} documents")
-            
+            self.logger.info(f"Knowledge Base returned {len(results)} documents")
             return results
             
-        except (RagHandlerError, McpCommunicationError):
-            raise
         except Exception as e:
-            self.logger.error(f"MCP search error: {str(e)}")
-            raise McpCommunicationError(f"MCP search failed: {str(e)}")
+            self.logger.error(f"Knowledge Base search error: {str(e)}")
+            return await self._fallback_search(query, limit)
     
-    async def _call_mcp_server(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _fallback_search(self, query: str, limit: int) -> List[Dict[str, Any]]:
         """
-        Call MCP server with request (placeholder implementation).
+        Fallback search using S3 processed documents.
         
         Args:
-            request: MCP request payload
+            query: Search query
+            limit: Maximum results
             
         Returns:
-            MCP response
+            Search results from S3 documents
         """
-        # This is a placeholder implementation
-        # In production, this would make actual calls to the MCP server
-        # either via HTTP, Lambda invocation, or other transport
+        import os
+        import boto3
         
-        tool_name = request.get('tool')
-        parameters = request.get('parameters', {})
+        self.logger.info("Using S3 document search (Knowledge Base not configured)")
         
-        if tool_name == 'search_documents':
-            # Simulate document search results
-            query = parameters.get('query', '')
-            limit = parameters.get('limit', 5)
-            threshold = parameters.get('threshold', 0.7)
-            
-            # Generate mock results based on query
-            import hashlib
-            query_hash = hashlib.md5(query.encode()).hexdigest()[:8]
-            
-            mock_results = [
-                {
-                    'id': f'doc_{i}_{query_hash}',
-                    'content': f'Document content related to "{query}". This is chunk {i} '
-                             f'containing relevant information for the user query. '
-                             f'The content provides detailed information about the topic.',
-                    'source': f'document_{i % 3 + 1}.pdf',
-                    'score': max(threshold, 0.85 - (i * 0.05))
-                }
-                for i in range(min(limit, 3))
-            ]
-            
-            return {
-                'success': True,
-                'result': mock_results,
-                'tool': tool_name
-            }
+        processed_bucket = os.environ.get('PROCESSED_BUCKET', '')
+        if not processed_bucket:
+            self.logger.warning("No processed bucket configured")
+            return []
         
-        return {
-            'success': False,
-            'error': {
-                'message': f'Unknown tool: {tool_name}',
-                'code': 'UNKNOWN_TOOL'
-            }
-        }
+        try:
+            s3 = boto3.client('s3')
+            
+            # List processed documents
+            response = s3.list_objects_v2(Bucket=processed_bucket, Prefix='processed/')
+            
+            results = []
+            query_lower = query.lower()
+            
+            for obj in response.get('Contents', []):
+                if len(results) >= limit:
+                    break
+                    
+                key = obj['Key']
+                
+                try:
+                    # Get document content
+                    doc = s3.get_object(Bucket=processed_bucket, Key=key)
+                    content = doc['Body'].read().decode('utf-8')
+                    
+                    # Simple keyword matching
+                    if query_lower in content.lower():
+                        # Extract relevant snippet
+                        idx = content.lower().find(query_lower)
+                        start = max(0, idx - 200)
+                        end = min(len(content), idx + 300)
+                        snippet = content[start:end]
+                        
+                        results.append({
+                            'id': key,
+                            'content': snippet,
+                            'source': key.split('/')[-1],
+                            'score': 0.85
+                        })
+                except Exception as e:
+                    self.logger.warning(f"Error reading {key}: {str(e)}")
+                    continue
+            
+            self.logger.info(f"Found {len(results)} documents in S3")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"S3 search error: {str(e)}")
+            return []
 
 
 class RAGHandler:

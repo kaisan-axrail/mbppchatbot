@@ -39,18 +39,9 @@ class MultilingualPromptService:
 
 LANGUAGE SUPPORT (MBPP Requirement):
 - Automatically detect the user's language from their message
-- DEFAULT TO ENGLISH unless the user clearly uses another language
 - Respond in the SAME language the user used
-- Supported languages: English (default), Bahasa Malaysia, Mandarin (中文), Tamil (தமிழ்)
+- Supported languages: English, Bahasa Malaysia, Mandarin (中文), Tamil (தமிழ்)
 - If user mixes languages, respond in the primary language used
-- If uncertain about language, default to English
-
-LANGUAGE DETECTION RULES:
-- If message contains only English words (like "what", "tools", "list", "help", "can", "you", "do") → detected_language: "en"
-- If message contains Malay words (like "apa", "boleh", "saya", "dengan") → detected_language: "ms"
-- If message contains Chinese characters → detected_language: "zh"
-- If message contains Tamil script → detected_language: "ta"
-- When in doubt, always default to English ("en")
 
 MALAYSIAN CONTEXT AWARENESS:
 - Users are Malaysian, so understand local slang and expressions:
@@ -97,17 +88,6 @@ Response: {
   "language_name": "English", 
   "detected_sentiment": "NEUTRAL",
   "sentiment_confidence": 0.9,
-  "requires_attention": false,
-  "response_tone": "professional"
-}
-
-User: "list all tools you have"
-Response: {
-  "response": "I have access to several tools to help you: 1) Document search for finding relevant information, 2) Database operations for creating, reading, updating, and deleting records, 3) General conversation capabilities. How can I assist you with any of these?",
-  "detected_language": "en",
-  "language_name": "English",
-  "detected_sentiment": "NEUTRAL", 
-  "sentiment_confidence": 0.95,
   "requires_attention": false,
   "response_tone": "professional"
 }

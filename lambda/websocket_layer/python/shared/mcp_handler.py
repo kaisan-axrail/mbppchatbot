@@ -307,7 +307,7 @@ Please provide a comprehensive response to the original query based on the tool 
             
             # Prepare Lambda payload for listing tools
             payload = {
-                "action": "get_available_tools"
+                "action": "list_tools"
             }
             
             # Invoke MCP server Lambda function
@@ -351,18 +351,6 @@ Please provide a comprehensive response to the original query based on the tool 
                 f"Failed to get tool list: {str(e)}",
                 "TOOL_LIST_ERROR"
             )
-    
-    async def get_available_tools(self) -> List[Dict[str, Any]]:
-        """
-        Public method to get list of available tools from MCP server.
-        
-        Returns:
-            List of available tool information
-            
-        Raises:
-            MCPHandlerError: If unable to get tool list
-        """
-        return await self._get_available_tools()
     
     def _create_tool_identification_prompt(self, available_tools: List[Dict[str, Any]]) -> str:
         """

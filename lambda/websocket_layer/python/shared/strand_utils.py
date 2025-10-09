@@ -33,38 +33,79 @@ class StrandUtils:
     
     async def determine_query_type(self, user_message: str) -> QueryType:
         """
-        Determine the type of query using simple keyword detection + AI.
+        Determine the type of query using Claude Sonnet 4.5 via Strand SDK or fallback logic.
         
         Args:
             user_message: User's message to analyze
             
         Returns:
             QueryType enum value
+            
+        Raises:
+            StrandClientError: If query type determination fails
         """
         try:
+            # First try simple keyword-based classification for common patterns
             message_lower = user_message.lower()
             
-            # Simple rule: if message mentions "event", use MCP tools
-            event_keywords = ['event', 'events', 'acara']
-            if any(keyword in message_lower for keyword in event_keywords):
-                logger.info(f"Detected event keyword, routing to MCP_TOOL")
-                return QueryType.MCP_TOOL
-            
-            # Check for document/policy keywords for RAG
-            rag_keywords = ['document', 'policy', 'policies', 'terms', 'conditions', 'agreement', 'contract']
+            # Check for clear RAG indicators
+            rag_keywords = ['list all', 'show me', 'what are', 'tell me about', 'find', 'search', 'events', 'schedule', 'when is', 'what events']
             if any(keyword in message_lower for keyword in rag_keywords):
-                logger.info(f"Detected document keyword, routing to RAG")
+                logger.info(f"Detected RAG intent from keywords in: {user_message[:50]}...")
                 return QueryType.RAG
             
-            # For everything else, use AI classification
-            system_prompt = """Classify this query as one of:
-- "rag" if asking about documents, terms, policies
-- "mcp_tool" if asking to create/list/show/find/update/delete data
-- "general" for greetings, small talk, general knowledge
+            # Check for MCP tool indicators
+            mcp_keywords = ['create', 'add', 'insert', 'save', 'update', 'modify', 'delete', 'remove']
+            if any(keyword in message_lower for keyword in mcp_keywords):
+                logger.info(f"Detected MCP_TOOL intent from keywords in: {user_message[:50]}...")
+                return QueryType.MCP_TOOL
+            
+            # Try Strand SDK classification
+            base_prompt = """You are an expert intent classifier for a chatbot system. Your job is to analyze user messages and classify them into exactly one of three categories.
 
-Respond with only one word: rag, general, or mcp_tool"""
+CLASSIFICATION RULES:
+
+**RAG** - Use when the user is asking for:
+- Information about specific documents, files, or content from a knowledge base
+- Questions that need searching through stored documents or data
+- Requests to find, lookup, retrieve, list, show, or get specific information
+- Questions about events, schedules, dates, or specific factual data
+- Questions about "documents about X", "information on Y", "find content about Z"
+- Queries like "list all X", "show me Y", "what are the Z", "tell me about events"
+- Examples: "Search for documents about AWS", "Find information on pricing", "List all events for October 2024", "Show me upcoming events", "What events are happening?"
+
+**MCP_TOOL** - Use when the user wants to:
+- Create, add, insert, or make something new
+- Update, modify, edit, or change existing data
+- Delete, remove, or destroy something
+- Perform database operations or data management tasks
+- Execute specific actions or commands
+- Examples: "Create a record", "Update user data", "Delete this item", "Add new entry", "Save this information"
+
+**GENERAL** - Use for everything else:
+- Casual conversation and greetings
+- General knowledge questions that don't require specific documents
+- Explanations about concepts or how things work in general
+- Questions about capabilities or features
+- Examples: "Hello", "How are you?", "What is AI?", "Explain machine learning", "What can you do?"
+
+IMPORTANT: 
+- Look for INFORMATION RETRIEVAL: list/show/get/tell/what/events/dates = RAG
+- Look for ACTION WORDS: create/add/insert/save/update/delete = MCP_TOOL
+- If asking for specific factual information or data, choose RAG
+- If unsure between RAG and GENERAL, choose RAG if it could be in a knowledge base
+- If unsure between MCP_TOOL and GENERAL, look for specific action verbs
+
+CRITICAL: You MUST respond with EXACTLY one word only. No explanations, no additional text.
+Valid responses: rag, general, mcp_tool
+
+Your response:"""
+            
+            # Use the base prompt directly for better classification accuracy
+            system_prompt = base_prompt
             
             messages = format_messages_for_strand(user_message)
+            
             response = await self.client.generate_response(
                 messages=messages,
                 system_prompt=system_prompt,
@@ -73,16 +114,50 @@ Respond with only one word: rag, general, or mcp_tool"""
             )
             
             response_text = extract_text_from_strand_response(response).strip().lower()
+            logger.info(f"Query type classification response: '{response_text}' for query: '{user_message[:50]}...'")
             
+            # Parse response - check exact matches first, then flexible matching
             if response_text == "rag":
+                logger.info(f"Detected RAG intent from exact match: {response_text}")
                 return QueryType.RAG
             elif response_text == "mcp_tool":
+                logger.info(f"Detected MCP_TOOL intent from exact match: {response_text}")
+                return QueryType.MCP_TOOL
+            elif response_text == "general":
+                logger.info(f"Detected GENERAL intent from exact match: {response_text}")
+                return QueryType.GENERAL
+            # Flexible matching for partial responses
+            elif "rag" in response_text or ("search" in response_text and "document" in response_text):
+                logger.info(f"Detected RAG intent from keywords: {response_text}")
+                return QueryType.RAG
+            elif "mcp_tool" in response_text or ("create" in response_text or "update" in response_text or "delete" in response_text):
+                logger.info(f"Detected MCP_TOOL intent from keywords: {response_text}")
                 return QueryType.MCP_TOOL
             else:
+                # Default to general if unclear
+                logger.info(f"Defaulting to GENERAL for response: {response_text}")
                 return QueryType.GENERAL
                 
         except Exception as e:
-            logger.error(f"Failed to determine query type: {str(e)}")
+            logger.error(f"Failed to determine query type with Strand SDK: {str(e)}")
+            
+            # Fallback to keyword-based classification
+            message_lower = user_message.lower()
+            
+            # Check for clear RAG indicators again as fallback
+            rag_keywords = ['list all', 'show me', 'what are', 'tell me about', 'find', 'search', 'events', 'schedule', 'when is', 'what events']
+            if any(keyword in message_lower for keyword in rag_keywords):
+                logger.info(f"Fallback: Detected RAG intent from keywords")
+                return QueryType.RAG
+            
+            # Check for MCP tool indicators
+            mcp_keywords = ['create', 'add', 'insert', 'save', 'update', 'modify', 'delete', 'remove']
+            if any(keyword in message_lower for keyword in mcp_keywords):
+                logger.info(f"Fallback: Detected MCP_TOOL intent from keywords")
+                return QueryType.MCP_TOOL
+            
+            # Default to general
+            logger.info(f"Fallback: Defaulting to GENERAL")
             return QueryType.GENERAL
     
     async def generate_general_response(
@@ -343,30 +418,39 @@ Instructions:
             StrandClientError: If tool identification fails
         """
         try:
-            system_prompt = """You are a tool identifier for a chatbot system. Analyze the user's message and identify which MCP tools are needed.
+            system_prompt = """You are an expert tool selector. Analyze the user's request and determine which specific tools are needed.
 
-Available tools:
-- create_event: Create a new event in the database
-- read_event: Read/search for a specific event by name or location
-- update_event: Update an existing event
-- delete_event: Delete an event
-- list_events: List all events from the database
-- list_tools: List all available tools
+AVAILABLE TOOLS:
 
-How to choose:
-- User asks about a SPECIFIC event ("colabs event", "test event") → ["read_event"]
-- User asks to see ALL events ("show all events", "list events") → ["list_events"]
-- User wants to CREATE an event → ["create_event"]
-- User wants to UPDATE an event → ["update_event"]
-- User wants to DELETE an event → ["delete_event"]
-- User asks what you can do → ["list_tools"]
+**search_documents** - Use when user wants to:
+- Search, find, lookup, or retrieve documents
+- Get information from knowledge base
+- Keywords: "search", "find", "lookup", "documents about", "information on"
 
-NOTE: Document search is handled by RAG system, not MCP tools.
+**create_record** - Use when user wants to:
+- Create, add, insert, make, or save new data
+- Keywords: "create", "add", "insert", "make", "save", "new record"
 
-Respond with a JSON array of tool names, for example: ["read_event"]
-If no tools are needed, respond with an empty array: []
+**read_record** - Use when user wants to:
+- Get, retrieve, show, display, or view existing data
+- Keywords: "get", "show", "display", "retrieve", "read", "view record"
 
-IMPORTANT: The AI will automatically understand the user's intent and choose the right tool(s)."""
+**update_record** - Use when user wants to:
+- Modify, edit, change, or update existing data
+- Keywords: "update", "modify", "edit", "change", "alter"
+
+**delete_record** - Use when user wants to:
+- Remove, delete, destroy, or eliminate data
+- Keywords: "delete", "remove", "destroy", "eliminate"
+
+EXAMPLES:
+- "Create a record with name test" → ["create_record"]
+- "Search for documents about AWS" → ["search_documents"]
+- "Update user John's email" → ["update_record"]
+- "Delete record ID 123" → ["delete_record"]
+- "Show me record 456" → ["read_record"]
+
+Respond with ONLY a JSON array: ["tool1", "tool2"] or [] if no tools needed."""
             
             messages = format_messages_for_strand(user_message)
             
@@ -395,57 +479,6 @@ IMPORTANT: The AI will automatically understand the user's intent and choose the
         except Exception as e:
             logger.error(f"Failed to identify MCP tools: {str(e)}")
             return []
-    
-    async def extract_event_parameters(self, user_message: str) -> Dict[str, Any]:
-        """Extract event parameters from user message for creating event."""
-        try:
-            from datetime import datetime
-            system_prompt = f"""Extract event details from the user's message and return ONLY valid JSON.
-Return format: {{"data": {{"name": "...", "location": "...", "date": "YYYY-MM-DD", "category": "...", "registration_open": true/false, "description": "..."}}}}
-
-Rules:
-- DO NOT include eventId (it's auto-generated)
-- If 'today' is mentioned, use date: "{datetime.now().strftime('%Y-%m-%d')}"
-- If a field is not mentioned, omit it
-- Return ONLY the JSON, no explanations"""
-            
-            messages = format_messages_for_strand(user_message)
-            response = await self.client.generate_response(
-                messages=messages,
-                system_prompt=system_prompt,
-                max_tokens=200,
-                temperature=0.1
-            )
-            
-            import json
-            response_text = extract_text_from_strand_response(response).strip()
-            return json.loads(response_text)
-        except Exception as e:
-            logger.error(f"Failed to extract event parameters: {str(e)}")
-            return {"data": {}}
-    
-    async def extract_search_term(self, user_message: str) -> str:
-        """Extract search term (event name, location) from user message."""
-        try:
-            system_prompt = """Extract the event name or location the user is searching for.
-Return ONLY the search term as plain text, no JSON, no quotes.
-Examples:
-- "show me the colabs event" -> colabs
-- "find test creating event" -> test creating event
-- "events in singapore" -> singapore"""
-            
-            messages = format_messages_for_strand(user_message)
-            response = await self.client.generate_response(
-                messages=messages,
-                system_prompt=system_prompt,
-                max_tokens=50,
-                temperature=0.1
-            )
-            
-            return extract_text_from_strand_response(response).strip()
-        except Exception as e:
-            logger.error(f"Failed to extract search term: {str(e)}")
-            return ""
     
     async def process_tool_results(
         self, 

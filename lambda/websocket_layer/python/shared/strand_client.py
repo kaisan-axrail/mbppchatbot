@@ -72,7 +72,7 @@ class StrandClient:
         
         # Inference profile configuration (preferred)
         self.inference_profile_arn = os.environ.get('BEDROCK_INFERENCE_PROFILE_ARN')
-        self.cross_region_profile = os.environ.get('BEDROCK_CROSS_REGION_PROFILE', 'us.anthropic.claude-3-5-sonnet-20241022-v2:0')
+        self.cross_region_profile = os.environ.get('BEDROCK_CROSS_REGION_PROFILE', 'apac.amazon.nova-pro-v1:0')
         
         # Fallback model configuration
         self.model_id = os.environ.get('BEDROCK_CLAUDE_MODEL', 'anthropic.claude-sonnet-4-20250514-v1:0')
@@ -224,7 +224,7 @@ class StrandClient:
             return {
                 "content": [{"type": "text", "text": response.get('content', '')}],
                 "usage": response.get('usage', {}),
-                "model": "strands-claude",
+                "model": "strands-nova",
                 "provider": "strands"
             }
             
@@ -246,56 +246,51 @@ class StrandClient:
         max_tokens = max_tokens or self.max_tokens
         temperature = temperature or self.temperature
         
-        # Format messages for Claude
-        # Check if using Nova Pro model for message formatting
-        is_nova_model = "nova" in self.model_id.lower() or "nova" in (self.inference_profile_arn or "").lower() or "nova" in (self.cross_region_profile or "").lower()
-        
-        claude_messages = []
-        for msg in messages:
-            if is_nova_model:
-                # Nova Pro message format
-                claude_messages.append({
+        # Format messages and prepare request body based on model type
+        if self._is_nova_model(self.active_model_id):
+            # Nova model format
+            nova_messages = []
+            for msg in messages:
+                nova_messages.append({
                     "role": msg.get("role", "user"),
                     "content": [{"text": msg.get("content", "")}]
                 })
-            else:
-                # Claude message format
+            
+            body = {
+                "messages": nova_messages,
+                "inferenceConfig": {
+                    "max_new_tokens": max_tokens,
+                    "temperature": temperature
+                }
+            }
+            
+            # Add system prompt if provided (Nova format)
+            if system_prompt:
+                body["system"] = [{"text": system_prompt}]
+        else:
+            # Claude model format
+            claude_messages = []
+            for msg in messages:
                 claude_messages.append({
                     "role": msg.get("role", "user"),
                     "content": msg.get("content", "")
                 })
-        
-        # Check if using Nova Pro model and adjust API format
-        is_nova_model = "nova" in self.model_id.lower() or "nova" in (self.inference_profile_arn or "").lower() or "nova" in (self.cross_region_profile or "").lower()
-        
-        if is_nova_model:
-            # Nova Pro API format
-            body = {
-                "messages": claude_messages,
-                "inferenceConfig": {
-                    "maxTokens": max_tokens,
-                    "temperature": temperature
-                }
-            }
-            # Add system prompt if provided
-            if system_prompt:
-                body["system"] = [{"text": system_prompt}]
-        else:
-            # Claude API format
+            
             body = {
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": max_tokens,
                 "temperature": temperature,
                 "messages": claude_messages
             }
-            # Add system prompt if provided
+            
+            # Add system prompt if provided (Claude format)
             if system_prompt:
                 body["system"] = system_prompt
         
         # Context for error handling
         context = {
             'model_attempts': [],
-            'message_count': len(claude_messages),
+            'message_count': len(messages),
             'max_tokens': max_tokens,
             'temperature': temperature
         }
@@ -365,6 +360,7 @@ class StrandClient:
     async def _invoke_model(self, model_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
         """
         Invoke Bedrock model with enhanced error handling and logging.
+        Supports both Claude and Nova model formats.
         
         Args:
             model_id: Model ID or inference profile ARN
@@ -387,37 +383,41 @@ class StrandClient:
             # Parse response
             response_body = json.loads(response['body'].read())
             
-            # Debug: Log the response structure to understand Nova Pro format
-            logger.info(f"Bedrock response structure: {json.dumps(response_body, indent=2)}")
-            
-            # Extract content from response - handle both Claude and Nova Pro formats
+            # Extract content based on model type
             content = ""
-            if 'content' in response_body and response_body['content']:
-                # Claude format: content[0].text
-                if isinstance(response_body['content'], list) and response_body['content']:
+            usage = {}
+            
+            if self._is_nova_model(model_id):
+                # Nova model response format
+                if 'output' in response_body and 'message' in response_body['output']:
+                    message = response_body['output']['message']
+                    if 'content' in message and message['content']:
+                        for content_item in message['content']:
+                            if 'text' in content_item:
+                                content = content_item.get('text', '')
+                                break
+                
+                # Nova usage format
+                usage = response_body.get("usage", {})
+            else:
+                # Claude model response format
+                if 'content' in response_body and response_body['content']:
                     content = response_body['content'][0].get('text', '')
-                # Nova Pro format: content.text
-                elif isinstance(response_body['content'], dict):
-                    content = response_body['content'].get('text', '')
-            # Nova Pro alternative format: output.message.content[0].text
-            elif 'output' in response_body and 'message' in response_body['output']:
-                message = response_body['output']['message']
-                if 'content' in message and message['content']:
-                    content = message['content'][0].get('text', '')
+                usage = response_body.get("usage", {})
             
             logger.info(
                 f"Successfully generated response using model: {model_id}",
                 extra={
                     'model_id': model_id,
                     'content_length': len(content),
-                    'input_tokens': response_body.get("usage", {}).get("input_tokens", 0),
-                    'output_tokens': response_body.get("usage", {}).get("output_tokens", 0)
+                    'input_tokens': usage.get("inputTokens", usage.get("input_tokens", 0)),
+                    'output_tokens': usage.get("outputTokens", usage.get("output_tokens", 0))
                 }
             )
             
             return {
                 "content": [{"type": "text", "text": content}],
-                "usage": response_body.get("usage", {}),
+                "usage": usage,
                 "model": model_id
             }
             
@@ -450,6 +450,18 @@ class StrandClient:
                 }
             )
             raise BedrockError(f"Model invocation failed: {str(e)}", "MODEL_INVOCATION_ERROR")
+    
+    def _is_nova_model(self, model_id: str) -> bool:
+        """
+        Check if the model ID is a Nova model.
+        
+        Args:
+            model_id: Model ID or inference profile ARN
+            
+        Returns:
+            True if it's a Nova model, False otherwise
+        """
+        return "nova" in model_id.lower()
     
     def _get_client_error_actionable_info(self, error_code: str) -> Dict[str, str]:
         """
@@ -556,20 +568,23 @@ class StrandClient:
             Test result status
         """
         try:
-            # Simple test message - adjust format based on model type
-            is_nova_model = "nova" in model_id.lower()
-            
-            if is_nova_model:
-                # Nova Pro API format
+            # Prepare test body based on model type
+            if self._is_nova_model(model_id):
+                # Nova model test format
                 test_body = {
-                    "messages": [{"role": "user", "content": [{"text": "Hello"}]}],
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [{"text": "Hello"}]
+                        }
+                    ],
                     "inferenceConfig": {
-                        "maxTokens": 10,
+                        "max_new_tokens": 10,
                         "temperature": 0.1
                     }
                 }
             else:
-                # Claude API format
+                # Claude model test format
                 test_body = {
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 10,
@@ -625,7 +640,7 @@ class StrandClient:
         
         return {
             "content": [{"type": "text", "text": fallback_message}],
-            "usage": {"input_tokens": 0, "output_tokens": len(fallback_message.split())},
+            "usage": {"inputTokens": 0, "outputTokens": len(fallback_message.split())},
             "model": "fallback",
             "is_fallback": True
         }
@@ -685,21 +700,10 @@ def extract_text_from_strand_response(response: Dict[str, Any]) -> str:
         Extracted text content
     """
     try:
-        # Claude format: content[0].text
         if 'content' in response and response['content']:
-            if isinstance(response['content'], list):
-                for content_item in response['content']:
-                    if content_item.get('type') == 'text':
-                        return content_item.get('text', '')
-            # Nova Pro format: content.text
-            elif isinstance(response['content'], dict):
-                return response['content'].get('text', '')
-        
-        # Nova Pro alternative format: output.message.content[0].text
-        if 'output' in response and 'message' in response['output']:
-            message = response['output']['message']
-            if 'content' in message and message['content']:
-                return message['content'][0].get('text', '')
+            for content_item in response['content']:
+                if content_item.get('type') == 'text':
+                    return content_item.get('text', '')
         
         return ""
         
