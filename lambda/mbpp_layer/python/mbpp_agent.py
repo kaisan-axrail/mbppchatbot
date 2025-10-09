@@ -206,6 +206,16 @@ class MBPPAgent:
                     "type": "workflow",
                     "workflow_type": "complaint",
                     "workflow_id": workflow_id,
+                    "response": "What is the location where you experienced this issue?",
+                    "session_id": session_id
+                }
+            elif current_step == 2 and 'location' not in collected_data:
+                collected_data['location'] = message
+                workflow_context['current_step'] = 3
+                return {
+                    "type": "workflow",
+                    "workflow_type": "complaint",
+                    "workflow_id": workflow_id,
                     "response": "Can you please confirm if your internet connection is working properly?",
                     "session_id": session_id,
                     "quick_replies": [
@@ -213,9 +223,9 @@ class MBPPAgent:
                         {"text": "❌ No", "value": "no"}
                     ]
                 }
-            elif current_step == 2:
+            elif current_step == 3:
                 collected_data['verification'] = 'yes' in message.lower()
-                workflow_context['current_step'] = 3
+                workflow_context['current_step'] = 4
                 
                 from strands_tools.mbpp_workflows import MBPPWorkflowManager
                 manager = MBPPWorkflowManager()
@@ -225,6 +235,7 @@ class MBPPAgent:
                     "ticket_number": ticket_number,
                     "subject": "Service Error",
                     "details": collected_data['description'],
+                    "location": collected_data.get('location', ''),
                     "feedback": "Aduan",
                     "category": "Service/ System Error",
                     "sub_category": "-",
@@ -238,6 +249,7 @@ class MBPPAgent:
                     f"**Subject:** {ticket['subject']}\n\n"
                     f"**Details:** {ticket['details']}\n\n"
                     f"**Category:** {ticket['category']}\n\n"
+                    f"**Location:** {ticket['location']}\n\n"
                     f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
                     "Is this correct?"
                 )
@@ -253,10 +265,11 @@ class MBPPAgent:
                         {"text": "❌ No, start over", "value": "no"}
                     ]
                 }
-            elif current_step == 3:
+            elif current_step == 4:
                 if 'no' in message.lower():
                     workflow_context['current_step'] = 1
-                    workflow_context['data'] = {}
+                    image_data = collected_data.get('image_data')
+                    workflow_context['data'] = {'image_data': image_data, 'has_image': True}
                     return {
                         "type": "workflow",
                         "workflow_type": "complaint",

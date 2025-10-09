@@ -20,14 +20,19 @@
 3. **Issue Description**
    - User: "MBPP website service down without notice"
    - Bot stores: Description
+   - Bot: "What is the location where you experienced this issue?"
 
-4. **Verification Check**
+4. **Location Collection**
+   - User: "Penang, Malaysia"
+   - Bot stores: Location
+
+5. **Verification Check**
    - Bot: "Can you please confirm if your internet connection is working properly?"
    - Quick Replies: [✅ Yes] [❌ No]
    - User: "Yes"
    - Bot stores: Verification = Yes
 
-5. **Ticket Preview**
+6. **Ticket Preview**
    - Bot shows preview:
      ```
      Please confirm these details:
@@ -35,13 +40,14 @@
      **Subject:** Service Error
      **Details:** MBPP website service down without notice
      **Category:** Service/ System Error
+     **Location:** Penang, Malaysia
      **Internet verified:** Yes
      
      Is this correct?
      ```
    - Quick Replies: [✅ Yes, submit] [❌ No, start over]
 
-6. **Final Confirmation**
+7. **Final Confirmation**
    - User: "Yes"
    - Bot: Saves image to S3 (s3://mbpp-incident-images-{account}/complaints/{ticket_number}/...)
    - Bot: Saves ticket to DynamoDB with image_url
@@ -181,7 +187,7 @@
 | **Trigger** | Image upload | "report incident" TEXT | Image upload |
 | **User Choice** | "Not an incident" | N/A | "Yes, report incident" |
 | **Image** | Yes (required) | Yes (required) | Yes (required) |
-| **Steps** | 6 steps | 6 steps | 6 steps |
+| **Steps** | 7 steps | 6 steps | 6 steps |
 | **AI Usage** | None | Extraction + Hazard question + Classification | Extraction + Hazard question + Classification |
 | **Category** | Service/System Error | Bencana Alam, etc. | Bencana Alam, etc. |
 | **Image Storage** | Always (S3) | Always (S3) | Always (S3) |

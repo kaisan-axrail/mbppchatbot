@@ -229,70 +229,76 @@ class ChatbotEngine:
         try:
             logger.info(f"Processing RAG query: {message[:100]}...")
             
-            # Get knowledge base ID from environment
-            kb_id = os.environ.get('KNOWLEDGE_BASE_ID')
-            if not kb_id:
+            # Get knowledge base IDs from environment
+            kb_ids = [
+                os.environ.get('KNOWLEDGE_BASE_ID', 'U6EAI0DHJC'),
+                os.environ.get('KNOWLEDGE_BASE_ID_2', 'CTFE3RJR01')
+            ]
+            kb_ids = [kb for kb in kb_ids if kb]  # Filter out empty values
+            
+            if not kb_ids:
                 logger.warning("No KNOWLEDGE_BASE_ID configured, falling back to general response")
                 response_content = await self.strand_utils.generate_general_response(
                     message, conversation_history
                 )
                 return response_content, []
             
-            # Query knowledge base
+            # Query all knowledge bases and combine results
             all_documents = []
             bedrock_agent = boto3.client('bedrock-agent-runtime', region_name=self.region)
             
-            try:
-                logger.info(f"Querying knowledge base {kb_id} for: {message}")
-                response = bedrock_agent.retrieve(
-                    knowledgeBaseId=kb_id,
-                    retrievalQuery={'text': message},
-                    retrievalConfiguration={
-                        'vectorSearchConfiguration': {
-                            'numberOfResults': 10
+            for kb_id in kb_ids:
+                try:
+                    logger.info(f"Querying knowledge base {kb_id} for: {message}")
+                    response = bedrock_agent.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={'text': message},
+                        retrievalConfiguration={
+                            'vectorSearchConfiguration': {
+                                'numberOfResults': 10
+                            }
                         }
-                    }
-                )
-                
-                logger.info(f"Knowledge base returned {len(response.get('retrievalResults', []))} results")
-                
-                for result in response.get('retrievalResults', []):
-                    content_text = result.get('content', {}).get('text', '')
-                    if content_text.strip():  # Only include non-empty content
-                        all_documents.append({
-                            'id': result.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', 'unknown'),
-                            'content': content_text,
-                            'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
-                            'score': result.get('score', 0.0)
-                        })
-                        
-            except Exception as kb_error:
-                logger.error(f"Failed to query KB {kb_id}: {str(kb_error)}")
-                # Fall back to general response
-                response_content = await self.strand_utils.generate_general_response(
-                    message, conversation_history
-                )
-                return response_content, []
+                    )
+                    
+                    logger.info(f"Knowledge base {kb_id} returned {len(response.get('retrievalResults', []))} results")
+                    
+                    for result in response.get('retrievalResults', []):
+                        content_text = result.get('content', {}).get('text', '')
+                        if content_text.strip():  # Only include non-empty content
+                            all_documents.append({
+                                'id': result.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', 'unknown'),
+                                'content': content_text,
+                                'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                                'score': result.get('score', 0.0),
+                                'kb_id': kb_id
+                            })
+                            
+                except Exception as kb_error:
+                    logger.error(f"Failed to query KB {kb_id}: {str(kb_error)}")
+                    # Continue to next KB instead of failing completely
+                    continue
             
+            # If all KBs failed, fall back to general response
             if not all_documents:
-                logger.warning("No documents retrieved from knowledge base")
+                logger.warning("All knowledge base queries failed, falling back to general response")
                 response_content = await self.strand_utils.generate_general_response(
                     message, conversation_history
                 )
                 return response_content, []
+
             
-            # Sort by score and take top 5
+            # Sort by score and take top 5 from combined results
             all_documents.sort(key=lambda x: x['score'], reverse=True)
             all_documents = all_documents[:5]
             
-            logger.info(f"Using {len(all_documents)} documents for RAG response")
+            logger.info(f"Using {len(all_documents)} documents from {len(kb_ids)} knowledge bases for RAG response")
             
             # Generate response using knowledge base content
             response_content, sources = await self.strand_utils.generate_rag_response(
                 message, all_documents, conversation_history
             )
             
-            logger.info(f"Generated RAG response with {len(sources)} sources")
+            logger.info(f"Generated RAG response with {len(sources)} sources from combined KBs")
             return response_content, sources
             
         except Exception as e:
