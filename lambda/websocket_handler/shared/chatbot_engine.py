@@ -144,29 +144,21 @@ class ChatbotEngine:
             # Update session activity
             await self.session_manager.update_activity(session_id)
             
-            # Determine query type
-            query_type = await self.determine_query_type(message)
-            
             # Get conversation history
             conversation_history = self._get_conversation_history(session_id)
             
-            # Route to appropriate handler
+            # ALWAYS try knowledge base first, then fall back to general
             response_content = ""
             sources = []
             tools_used = []
             
-            if query_type == QueryType.RAG:
-                response_content, sources = await self._handle_rag_query(
-                    message, conversation_history
-                )
-            elif query_type == QueryType.GENERAL:
-                response_content = await self._handle_general_query(
-                    message, conversation_history
-                )
-            elif query_type == QueryType.MCP_TOOL:
-                response_content, tools_used = await self._handle_mcp_query(
-                    message, conversation_history
-                )
+            logger.info(f"Attempting knowledge base search for: {message[:50]}...")
+            response_content, sources = await self._handle_rag_query(
+                message, conversation_history
+            )
+            
+            # If no sources found, it means KB had no results and already fell back to general
+            query_type = QueryType.RAG if sources else QueryType.GENERAL
             
             # Calculate response time
             end_time = datetime.now()
@@ -225,7 +217,7 @@ class ChatbotEngine:
         conversation_history: List[Dict[str, str]]
     ) -> Tuple[str, List[str]]:
         """
-        Handle RAG (Retrieval-Augmented Generation) queries.
+        Handle RAG (Retrieval-Augmented Generation) queries using Bedrock Knowledge Base.
         
         Args:
             message: User's message
@@ -235,43 +227,83 @@ class ChatbotEngine:
             Tuple of (response_content, sources)
         """
         try:
-            # Call the MCP server to search documents
-            from shared.mcp_handler import create_mcp_handler
+            logger.info(f"Processing RAG query: {message[:100]}...")
             
-            mcp_handler = create_mcp_handler(
-                mcp_server_lambda_arn=os.environ.get('MCP_SERVER_ARN'),
-                region=self.region
-            )
+            # Get knowledge base IDs from environment
+            kb_ids = [
+                os.environ.get('KNOWLEDGE_BASE_ID', 'U6EAI0DHJC'),
+                os.environ.get('KNOWLEDGE_BASE_ID_2', 'CTFE3RJR01')
+            ]
+            kb_ids = [kb for kb in kb_ids if kb]  # Filter out empty values
             
-            # Search for relevant documents
-            search_result = await mcp_handler.execute_tool(
-                tool_name='search_documents',
-                parameters={
-                    'query': message,
-                    'limit': 5,
-                    'threshold': 0.7
-                }
-            )
+            if not kb_ids:
+                logger.warning("No KNOWLEDGE_BASE_ID configured, falling back to general response")
+                response_content = await self.strand_utils.generate_general_response(
+                    message, conversation_history
+                )
+                return response_content, []
             
-            # Extract documents from search result
-            documents = []
-            if search_result.get('success') and search_result.get('results'):
-                documents = search_result['results']
-                logger.info(f"Found {len(documents)} relevant documents")
-            else:
-                logger.warning(f"No documents found for query: {message[:50]}...")
+            # Query all knowledge bases and combine results
+            all_documents = []
+            bedrock_agent = boto3.client('bedrock-agent-runtime', region_name=self.region)
             
-            # Generate response using Strand SDK with retrieved context
+            for kb_id in kb_ids:
+                try:
+                    logger.info(f"Querying knowledge base {kb_id} for: {message}")
+                    response = bedrock_agent.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={'text': message},
+                        retrievalConfiguration={
+                            'vectorSearchConfiguration': {
+                                'numberOfResults': 10
+                            }
+                        }
+                    )
+                    
+                    logger.info(f"Knowledge base {kb_id} returned {len(response.get('retrievalResults', []))} results")
+                    
+                    for result in response.get('retrievalResults', []):
+                        content_text = result.get('content', {}).get('text', '')
+                        if content_text.strip():  # Only include non-empty content
+                            all_documents.append({
+                                'id': result.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', 'unknown'),
+                                'content': content_text,
+                                'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
+                                'score': result.get('score', 0.0),
+                                'kb_id': kb_id
+                            })
+                            
+                except Exception as kb_error:
+                    logger.error(f"Failed to query KB {kb_id}: {str(kb_error)}")
+                    # Continue to next KB instead of failing completely
+                    continue
+            
+            # If all KBs failed, fall back to general response
+            if not all_documents:
+                logger.warning("All knowledge base queries failed, falling back to general response")
+                response_content = await self.strand_utils.generate_general_response(
+                    message, conversation_history
+                )
+                return response_content, []
+
+            
+            # Sort by score and take top 5 from combined results
+            all_documents.sort(key=lambda x: x['score'], reverse=True)
+            all_documents = all_documents[:5]
+            
+            logger.info(f"Using {len(all_documents)} documents from {len(kb_ids)} knowledge bases for RAG response")
+            
+            # Generate response using knowledge base content
             response_content, sources = await self.strand_utils.generate_rag_response(
-                message, documents, conversation_history
+                message, all_documents, conversation_history
             )
             
-            logger.info(f"Generated RAG response with {len(sources)} sources")
+            logger.info(f"Generated RAG response with {len(sources)} sources from combined KBs")
             return response_content, sources
             
         except Exception as e:
             logger.error(f"Failed to handle RAG query: {str(e)}")
-            # Fallback to general response
+            # Fall back to general response
             response_content = await self.strand_utils.generate_general_response(
                 message, conversation_history
             )
@@ -385,7 +417,7 @@ class ChatbotEngine:
         conversation_history: List[Dict[str, str]]
     ) -> Tuple[str, List[str]]:
         """
-        Handle MCP tool queries using real MCP protocol with Strands Agent.
+        Handle MCP tool queries.
         
         Args:
             message: User's message
@@ -395,40 +427,46 @@ class ChatbotEngine:
             Tuple of (response_content, tools_used)
         """
         try:
-            from shared.mcp_client_real import create_real_mcp_handler
+            # Identify required tools
+            tools_needed = await self.strand_utils.identify_mcp_tools(message)
             
-            mcp_lambda_arn = os.environ.get('MCP_SERVER_ARN')
-            if not mcp_lambda_arn:
-                logger.warning("MCP_SERVER_ARN not configured")
+            if not tools_needed:
+                # No tools needed, handle as general query
                 response_content = await self.strand_utils.generate_general_response(
                     message, conversation_history
                 )
                 return response_content, []
             
-            mcp_handler = create_real_mcp_handler(mcp_lambda_arn)
-            response_content = await mcp_handler.process_with_agent(message, conversation_history)
-            tools_used = ['mcp_tools']
+            # For now, this is a placeholder implementation
+            # In the actual implementation, this would:
+            # 1. Execute the identified MCP tools
+            # 2. Collect results from tool execution
+            # 3. Process results using Strand SDK
             
-            logger.info(f"Generated MCP response using Strands Agent")
-            return response_content, tools_used
+            # Placeholder: simulate tool execution
+            mock_tool_results = [
+                {
+                    'tool_name': tool,
+                    'success': True,
+                    'data': {'result': f'Mock result from {tool}'}
+                }
+                for tool in tools_needed
+            ]
+            
+            response_content = await self.strand_utils.process_tool_results(
+                message, mock_tool_results
+            )
+            
+            logger.info(f"Generated MCP response using tools: {tools_needed}")
+            return response_content, tools_needed
             
         except Exception as e:
             logger.error(f"Failed to handle MCP query: {str(e)}")
+            # Fallback to general response
             response_content = await self.strand_utils.generate_general_response(
                 message, conversation_history
             )
             return response_content, []
-    
-    def _filter_events(self, events: List[Dict], search_term: str) -> List[Dict]:
-        """Filter events by name, location, or description."""
-        if not search_term:
-            return events
-        search_lower = search_term.lower()
-        return [e for e in events if 
-                search_lower in e.get('name', '').lower() or
-                search_lower in e.get('eventName', '').lower() or
-                search_lower in e.get('location', '').lower() or
-                search_lower in e.get('description', '').lower()]
     
     def _get_conversation_history(
         self, 
@@ -496,7 +534,7 @@ class ChatbotEngine:
         user_context: Dict[str, Any] = None
     ) -> None:
         """
-        Log conversation to DynamoDB with error isolation and sentiment analysis.
+        Log conversation to DynamoDB with error isolation.
         
         Args:
             session_id: Session identifier
@@ -504,51 +542,34 @@ class ChatbotEngine:
             response: ChatbotResponse object
             user_context: Additional user context
         """
-        from shared.sentiment_analyzer import analyze_sentiment
-        
         conversations_table = self.dynamodb.Table(self.conversations_table_name)
-        history_table = self.dynamodb.Table(os.environ.get('CONVERSATION_HISTORY_TABLE', 'chatbot-conversation-history'))
         
-        # Analyze sentiment
-        user_sentiment = analyze_sentiment(user_message)
-        response_sentiment = analyze_sentiment(response.content)
-        
-        timestamp = get_current_timestamp()
-        
-        # Log user message to conversations table
+        # Log user message
         user_record = {
-            'sessionId': session_id,
-            'messageId': generate_message_id(),
-            'timestamp': timestamp,
+            'session_id': session_id,
+            'message_id': generate_message_id(),
+            'timestamp': get_current_timestamp(),
             'message_type': 'user',
             'content': user_message,
-            'sentiment': user_sentiment['sentiment'],
-            'sentiment_confidence': user_sentiment['confidence'],
             'user_context': user_context or {}
         }
         
-        # Log assistant response to conversations table
+        # Log assistant response
         assistant_record = {
-            'sessionId': session_id,
-            'messageId': response.message_id,
+            'session_id': session_id,
+            'message_id': response.message_id,
             'timestamp': response.timestamp,
             'message_type': 'assistant',
             'content': response.content,
-            'sentiment': response_sentiment['sentiment'],
-            'sentiment_confidence': response_sentiment['confidence'],
             'query_type': response.query_type.value,
             'sources': response.sources,
             'tools_used': response.tools_used,
             'response_time': response.response_time
         }
         
-        # Write to conversations table
+        # Write to DynamoDB (in parallel)
         conversations_table.put_item(Item=user_record)
         conversations_table.put_item(Item=assistant_record)
-        
-        # Write to conversation history table
-        history_table.put_item(Item=user_record)
-        history_table.put_item(Item=assistant_record)
         
         # Log analytics with isolation
         self._log_analytics_isolated(session_id, response.query_type, response.tools_used)
