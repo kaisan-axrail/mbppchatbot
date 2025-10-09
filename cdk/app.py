@@ -20,6 +20,7 @@ from stacks.shared_layer_stack import SharedLayerStack
 from stacks.chatbot_stack import ChatbotStack
 from stacks.mbpp_workflow_stack import MBPPWorkflowStack
 from stacks.pipeline_stack import PipelineStack
+from stacks.webchat_stack import WebChatStack
 
 app = cdk.App()
 
@@ -95,5 +96,12 @@ PipelineStack(app, "PipelineStack",
 #             ]
 #         )
 #     )
+
+# # Deploy Web Chat Frontend (S3 + CloudFront)
+# # Uncomment to deploy web chat
+# webchat_stack = WebChatStack(app, "MBPPWebChatStack")
+
+# Deploy Web Chat separately (not in pipeline)
+WebChatStack(app, "MBPPWebChatStack")
 
 app.synth()
