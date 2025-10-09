@@ -32,7 +32,7 @@ _websocket_endpoint = None
 dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION', 'ap-southeast-1'))
 
 def log_conversation(session_id, user_message, bot_response):
-    """Log conversation to DynamoDB tables"""
+    """Log conversation to DynamoDB tables with sentiment analysis"""
     try:
         import time
         import uuid
@@ -42,13 +42,17 @@ def log_conversation(session_id, user_message, bot_response):
         bot_timestamp = datetime.utcnow().isoformat() + 'Z'
         message_id = str(uuid.uuid4())
         
+        # Analyze sentiment using Bedrock
+        sentiment = analyze_sentiment(user_message)
+        
         history_table = dynamodb.Table(os.environ.get('CONVERSATION_HISTORY_TABLE', 'mbpp-conversation-history'))
         
         history_table.put_item(Item={
             'sessionId': session_id,
             'timestamp': user_timestamp,
             'message_type': 'user',
-            'content': user_message
+            'content': user_message,
+            'sentiment': sentiment
         })
         
         history_table.put_item(Item={
@@ -64,12 +68,45 @@ def log_conversation(session_id, user_message, bot_response):
             'messageId': message_id,
             'lastTimestamp': bot_timestamp,
             'lastUserMessage': user_message[:100],
-            'lastBotResponse': bot_response[:100]
+            'lastBotResponse': bot_response[:100],
+            'lastSentiment': sentiment
         })
         
-        logger.info(f"Logged conversation for session {session_id}")
+        logger.info(f"Logged conversation for session {session_id} with sentiment: {sentiment}")
     except Exception as e:
         logger.warning(f"Failed to log conversation: {str(e)}")
+
+def analyze_sentiment(message: str) -> str:
+    """Analyze sentiment of user message using Bedrock AI"""
+    try:
+        bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'ap-southeast-1'))
+        
+        prompt = f"""Analyze the sentiment of this message and respond with ONLY ONE WORD: positive, negative, or neutral.
+
+Message: "{message}"
+
+Sentiment:"""
+        
+        response = bedrock.invoke_model(
+            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 10,
+                "messages": [{"role": "user", "content": prompt}]
+            })
+        )
+        
+        result = json.loads(response['body'].read())
+        sentiment = result['content'][0]['text'].strip().lower()
+        
+        # Validate sentiment
+        if sentiment not in ['positive', 'negative', 'neutral']:
+            sentiment = 'neutral'
+        
+        return sentiment
+    except Exception as e:
+        logger.warning(f"Sentiment analysis failed: {str(e)}")
+        return 'neutral'
 
 def lambda_handler(event, context):
     """Main Lambda handler for WebSocket events."""
