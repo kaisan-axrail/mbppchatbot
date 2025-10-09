@@ -151,3 +151,6 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Web chat frontend (deployed separately)
+aeon-usersidechatbot/
