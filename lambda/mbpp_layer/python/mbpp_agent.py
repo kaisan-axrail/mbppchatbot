@@ -342,19 +342,11 @@ class MBPPAgent:
             collected_data['location'] = message
             workflow_context['current_step'] = 3
             
-            # Use AI to generate contextual hazard question with image context if available
+            # Use AI to generate contextual hazard question based on description only
             desc = collected_data['description']
-            img_data = collected_data.get('image_data')
             
             try:
-                if img_data:
-                    # Include image in prompt for better context
-                    prompt_content = [
-                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_data}},
-                        {"type": "text", "text": f"Based on this image and description: \"{desc}\"\n\nGenerate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.\nExamples:\n- \"Is it blocking the main road?\"\n- \"Is it causing immediate danger?\"\n- \"Is access blocked?\"\n\nRespond with ONLY the question, nothing else."}
-                    ]
-                else:
-                    prompt_content = f"""Based on this incident: "{desc}"
+                prompt_content = f"""Based on this incident: "{desc}"
 
 Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
 Examples:

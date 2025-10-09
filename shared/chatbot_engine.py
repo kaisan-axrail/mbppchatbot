@@ -3,6 +3,7 @@ ChatbotEngine for processing different types of queries and routing them appropr
 """
 
 import logging
+import os
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 import boto3
@@ -143,29 +144,21 @@ class ChatbotEngine:
             # Update session activity
             await self.session_manager.update_activity(session_id)
             
-            # Determine query type
-            query_type = await self.determine_query_type(message)
-            
             # Get conversation history
             conversation_history = self._get_conversation_history(session_id)
             
-            # Route to appropriate handler
+            # ALWAYS try knowledge base first, then fall back to general
             response_content = ""
             sources = []
             tools_used = []
             
-            if query_type == QueryType.RAG:
-                response_content, sources = await self._handle_rag_query(
-                    message, conversation_history
-                )
-            elif query_type == QueryType.GENERAL:
-                response_content = await self._handle_general_query(
-                    message, conversation_history
-                )
-            elif query_type == QueryType.MCP_TOOL:
-                response_content, tools_used = await self._handle_mcp_query(
-                    message, conversation_history
-                )
+            logger.info(f"Attempting knowledge base search for: {message[:50]}...")
+            response_content, sources = await self._handle_rag_query(
+                message, conversation_history
+            )
+            
+            # If no sources found, it means KB had no results and already fell back to general
+            query_type = QueryType.RAG if sources else QueryType.GENERAL
             
             # Calculate response time
             end_time = datetime.now()
@@ -234,36 +227,55 @@ class ChatbotEngine:
             Tuple of (response_content, sources)
         """
         try:
-            # Query both knowledge bases
-            kb_ids = ['U6EAI0DHJC', 'CTFE3RJR01']
-            all_documents = []
+            logger.info(f"Processing RAG query: {message[:100]}...")
             
+            # Get knowledge base ID from environment
+            kb_id = os.environ.get('KNOWLEDGE_BASE_ID')
+            if not kb_id:
+                logger.warning("No KNOWLEDGE_BASE_ID configured, falling back to general response")
+                response_content = await self.strand_utils.generate_general_response(
+                    message, conversation_history
+                )
+                return response_content, []
+            
+            # Query knowledge base
+            all_documents = []
             bedrock_agent = boto3.client('bedrock-agent-runtime', region_name=self.region)
             
-            for kb_id in kb_ids:
-                try:
-                    response = bedrock_agent.retrieve(
-                        knowledgeBaseId=kb_id,
-                        retrievalQuery={'text': message},
-                        retrievalConfiguration={
-                            'vectorSearchConfiguration': {
-                                'numberOfResults': 5
-                            }
+            try:
+                logger.info(f"Querying knowledge base {kb_id} for: {message}")
+                response = bedrock_agent.retrieve(
+                    knowledgeBaseId=kb_id,
+                    retrievalQuery={'text': message},
+                    retrievalConfiguration={
+                        'vectorSearchConfiguration': {
+                            'numberOfResults': 10
                         }
-                    )
-                    
-                    for result in response.get('retrievalResults', []):
+                    }
+                )
+                
+                logger.info(f"Knowledge base returned {len(response.get('retrievalResults', []))} results")
+                
+                for result in response.get('retrievalResults', []):
+                    content_text = result.get('content', {}).get('text', '')
+                    if content_text.strip():  # Only include non-empty content
                         all_documents.append({
                             'id': result.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', 'unknown'),
-                            'content': result.get('content', {}).get('text', ''),
+                            'content': content_text,
                             'source': result.get('location', {}).get('s3Location', {}).get('uri', 'unknown'),
                             'score': result.get('score', 0.0)
                         })
-                except Exception as kb_error:
-                    logger.warning(f"Failed to query KB {kb_id}: {str(kb_error)}")
+                        
+            except Exception as kb_error:
+                logger.error(f"Failed to query KB {kb_id}: {str(kb_error)}")
+                # Fall back to general response
+                response_content = await self.strand_utils.generate_general_response(
+                    message, conversation_history
+                )
+                return response_content, []
             
             if not all_documents:
-                logger.warning("No documents retrieved from knowledge bases")
+                logger.warning("No documents retrieved from knowledge base")
                 response_content = await self.strand_utils.generate_general_response(
                     message, conversation_history
                 )
@@ -273,15 +285,19 @@ class ChatbotEngine:
             all_documents.sort(key=lambda x: x['score'], reverse=True)
             all_documents = all_documents[:5]
             
+            logger.info(f"Using {len(all_documents)} documents for RAG response")
+            
+            # Generate response using knowledge base content
             response_content, sources = await self.strand_utils.generate_rag_response(
                 message, all_documents, conversation_history
             )
             
-            logger.info(f"Generated RAG response with {len(sources)} sources from {len(kb_ids)} KBs")
+            logger.info(f"Generated RAG response with {len(sources)} sources")
             return response_content, sources
             
         except Exception as e:
             logger.error(f"Failed to handle RAG query: {str(e)}")
+            # Fall back to general response
             response_content = await self.strand_utils.generate_general_response(
                 message, conversation_history
             )

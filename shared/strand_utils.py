@@ -33,7 +33,7 @@ class StrandUtils:
     
     async def determine_query_type(self, user_message: str) -> QueryType:
         """
-        Determine the type of query using Claude Sonnet 4.5 via Strand SDK.
+        Determine the type of query using Claude Sonnet 4.5 via Strand SDK or fallback logic.
         
         Args:
             user_message: User's message to analyze
@@ -45,16 +45,34 @@ class StrandUtils:
             StrandClientError: If query type determination fails
         """
         try:
+            # First try simple keyword-based classification for common patterns
+            message_lower = user_message.lower()
+            
+            # Check for clear RAG indicators
+            rag_keywords = ['list all', 'show me', 'what are', 'tell me about', 'find', 'search', 'events', 'schedule', 'when is', 'what events']
+            if any(keyword in message_lower for keyword in rag_keywords):
+                logger.info(f"Detected RAG intent from keywords in: {user_message[:50]}...")
+                return QueryType.RAG
+            
+            # Check for MCP tool indicators
+            mcp_keywords = ['create', 'add', 'insert', 'save', 'update', 'modify', 'delete', 'remove']
+            if any(keyword in message_lower for keyword in mcp_keywords):
+                logger.info(f"Detected MCP_TOOL intent from keywords in: {user_message[:50]}...")
+                return QueryType.MCP_TOOL
+            
+            # Try Strand SDK classification
             base_prompt = """You are an expert intent classifier for a chatbot system. Your job is to analyze user messages and classify them into exactly one of three categories.
 
 CLASSIFICATION RULES:
 
 **RAG** - Use when the user is asking for:
-- Information about specific documents, files, or content
-- Questions that need searching through a knowledge base
-- Requests to find, lookup, or retrieve specific information
+- Information about specific documents, files, or content from a knowledge base
+- Questions that need searching through stored documents or data
+- Requests to find, lookup, retrieve, list, show, or get specific information
+- Questions about events, schedules, dates, or specific factual data
 - Questions about "documents about X", "information on Y", "find content about Z"
-- Examples: "Search for documents about AWS", "Find information on pricing", "What documents do you have about security?"
+- Queries like "list all X", "show me Y", "what are the Z", "tell me about events"
+- Examples: "Search for documents about AWS", "Find information on pricing", "List all events for October 2024", "Show me upcoming events", "What events are happening?"
 
 **MCP_TOOL** - Use when the user wants to:
 - Create, add, insert, or make something new
@@ -66,14 +84,16 @@ CLASSIFICATION RULES:
 
 **GENERAL** - Use for everything else:
 - Casual conversation and greetings
-- General knowledge questions
-- Explanations that don't require specific documents
-- Questions about capabilities or how things work
-- Examples: "Hello", "How are you?", "What is AI?", "Explain machine learning", "What tools do you have?"
+- General knowledge questions that don't require specific documents
+- Explanations about concepts or how things work in general
+- Questions about capabilities or features
+- Examples: "Hello", "How are you?", "What is AI?", "Explain machine learning", "What can you do?"
 
 IMPORTANT: 
-- Look for ACTION WORDS: create/add/insert/save = MCP_TOOL, search/find/lookup/documents = RAG
-- If unsure between RAG and GENERAL, choose GENERAL
+- Look for INFORMATION RETRIEVAL: list/show/get/tell/what/events/dates = RAG
+- Look for ACTION WORDS: create/add/insert/save/update/delete = MCP_TOOL
+- If asking for specific factual information or data, choose RAG
+- If unsure between RAG and GENERAL, choose RAG if it could be in a knowledge base
 - If unsure between MCP_TOOL and GENERAL, look for specific action verbs
 
 CRITICAL: You MUST respond with EXACTLY one word only. No explanations, no additional text.
@@ -119,8 +139,25 @@ Your response:"""
                 return QueryType.GENERAL
                 
         except Exception as e:
-            logger.error(f"Failed to determine query type: {str(e)}")
-            # Default to general on error
+            logger.error(f"Failed to determine query type with Strand SDK: {str(e)}")
+            
+            # Fallback to keyword-based classification
+            message_lower = user_message.lower()
+            
+            # Check for clear RAG indicators again as fallback
+            rag_keywords = ['list all', 'show me', 'what are', 'tell me about', 'find', 'search', 'events', 'schedule', 'when is', 'what events']
+            if any(keyword in message_lower for keyword in rag_keywords):
+                logger.info(f"Fallback: Detected RAG intent from keywords")
+                return QueryType.RAG
+            
+            # Check for MCP tool indicators
+            mcp_keywords = ['create', 'add', 'insert', 'save', 'update', 'modify', 'delete', 'remove']
+            if any(keyword in message_lower for keyword in mcp_keywords):
+                logger.info(f"Fallback: Detected MCP_TOOL intent from keywords")
+                return QueryType.MCP_TOOL
+            
+            # Default to general
+            logger.info(f"Fallback: Defaulting to GENERAL")
             return QueryType.GENERAL
     
     async def generate_general_response(

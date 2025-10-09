@@ -112,7 +112,9 @@ class LambdaStack(Stack):
                                 "bedrock:InvokeModel",
                                 "bedrock:InvokeModelWithResponseStream",
                                 "bedrock:GetFoundationModel",
-                                "bedrock:ListFoundationModels"
+                                "bedrock:ListFoundationModels",
+                                "bedrock:Retrieve",
+                                "bedrock:RetrieveAndGenerate"
                             ],
                             resources=[
                                 f"arn:aws:bedrock:{self.region}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -120,7 +122,9 @@ class LambdaStack(Stack):
                                 # Add Nova Pro inference profile access
                                 f"arn:aws:bedrock:*:*:foundation-model/*",
                                 f"arn:aws:bedrock:*:*:inference-profile/*",
-                                f"arn:aws:bedrock:{self.region}:{self.account}:inference-profile/*"
+                                f"arn:aws:bedrock:{self.region}:{self.account}:inference-profile/*",
+                                # Add Knowledge Base access
+                                f"arn:aws:bedrock:{self.region}:{self.account}:knowledge-base/*"
                             ]
                         )
                     ]
@@ -155,12 +159,16 @@ class LambdaStack(Stack):
                                 f"{self.session_bucket.bucket_arn}/*"
                             ] + (
                                 [f"{self.images_bucket.bucket_arn}/*"] if self.images_bucket else []
+                            ) + (
+                                [f"{self.processed_bucket.bucket_arn}/*"] if self.processed_bucket else []
                             )
                         ),
                         iam.PolicyStatement(
                             actions=["s3:ListBucket"],
                             resources=[self.session_bucket.bucket_arn] + (
                                 [self.images_bucket.bucket_arn] if self.images_bucket else []
+                            ) + (
+                                [self.processed_bucket.bucket_arn] if self.processed_bucket else []
                             )
                         )
                     ]
@@ -223,6 +231,9 @@ class LambdaStack(Stack):
                 "SECRETS_ARN": self.api_secrets.secret_arn,
                 "MCP_SERVER_ARN": "",  # Will be updated after MCP server is created
                 "BEDROCK_REGION": self.region,
+                # Knowledge Base configuration
+                "KNOWLEDGE_BASE_ID": knowledge_base_id if knowledge_base_id else "",
+                "PROCESSED_BUCKET": self.processed_bucket.bucket_name if self.processed_bucket else "",
                 # Inference profile configuration (preferred)
                 "BEDROCK_INFERENCE_PROFILE_ARN": "",  # Set this for production deployment
                 "BEDROCK_CROSS_REGION_PROFILE": "apac.amazon.nova-pro-v1:0",
