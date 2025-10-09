@@ -239,6 +239,7 @@ class MBPPAgent:
                     "feedback": "Aduan",
                     "category": "Service/ System Error",
                     "sub_category": "-",
+                    "status": "open",
                     "created_at": datetime.now().isoformat()
                 }
                 
@@ -520,6 +521,7 @@ Respond with ONLY the question, nothing else."""
                 "category": classification["category"],
                 "sub_category": classification["sub_category"],
                 "blocked_road": collected_data.get('hazard_confirmation', False),
+                "status": "open",
                 "created_at": datetime.now().isoformat()
             }
             
