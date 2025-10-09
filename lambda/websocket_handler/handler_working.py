@@ -35,15 +35,15 @@ def log_conversation(session_id, user_message, bot_response):
     """Log conversation to DynamoDB tables"""
     try:
         import time
+        import uuid
         
-        # Use timestamp with microseconds for uniqueness
         user_timestamp = datetime.utcnow().isoformat() + 'Z'
-        time.sleep(0.001)  # Ensure different timestamps
+        time.sleep(0.001)
         bot_timestamp = datetime.utcnow().isoformat() + 'Z'
+        message_id = str(uuid.uuid4())
         
         history_table = dynamodb.Table(os.environ.get('CONVERSATION_HISTORY_TABLE', 'mbpp-conversation-history'))
         
-        # User message
         history_table.put_item(Item={
             'sessionId': session_id,
             'timestamp': user_timestamp,
@@ -51,7 +51,6 @@ def log_conversation(session_id, user_message, bot_response):
             'content': user_message
         })
         
-        # Bot response
         history_table.put_item(Item={
             'sessionId': session_id,
             'timestamp': bot_timestamp,
@@ -59,10 +58,10 @@ def log_conversation(session_id, user_message, bot_response):
             'content': bot_response
         })
         
-        # Log to conversations table (metadata)
         conversations_table = dynamodb.Table(os.environ.get('CONVERSATIONS_TABLE', 'mbpp-conversations'))
         conversations_table.put_item(Item={
             'sessionId': session_id,
+            'messageId': message_id,
             'lastTimestamp': bot_timestamp,
             'lastUserMessage': user_message[:100],
             'lastBotResponse': bot_response[:100]
