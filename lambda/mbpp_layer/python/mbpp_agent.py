@@ -402,12 +402,7 @@ Respond with ONLY the question."""
                 f"**Category:** {classification['category']}\n\n"
                 f"**Sub-category:** {classification['sub_category']}\n\n"
                 f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
-                f"**Location:** {collected_data['location']}\n\n"
-                "You can:\n"
-                "- Type 'Yes' to submit\n"
-                "- Type 'Edit description' to change description\n"
-                "- Type 'Edit location' to change location\n"
-                "- Type 'No' to restart"
+                f"**Location:** {collected_data['location']}"
             )
             
             collected_data['preview_classification'] = classification
@@ -416,7 +411,8 @@ Respond with ONLY the question."""
                 "workflow_type": workflow_type,
                 "workflow_id": workflow_id,
                 "response": preview,
-                "session_id": session_id
+                "session_id": session_id,
+                "quick_replies": ["Yes", "No"]
             }
         else:
             # Check if user wants to edit a field
@@ -463,12 +459,7 @@ Respond with ONLY the question."""
                     f"**Category:** {classification['category']}\n\n"
                     f"**Sub-category:** {classification['sub_category']}\n\n"
                     f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
-                    f"**Location:** {collected_data['location']}\n\n"
-                    "You can:\n"
-                    "- Type 'Yes' to submit\n"
-                    "- Type 'Edit description' to change description\n"
-                    "- Type 'Edit location' to change location\n"
-                    "- Type 'No' to restart"
+                    f"**Location:** {collected_data['location']}"
                 )
                 
                 return {
@@ -476,7 +467,8 @@ Respond with ONLY the question."""
                     "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
                     "response": preview,
-                    "session_id": session_id
+                    "session_id": session_id,
+                    "quick_replies": ["Yes", "No"]
                 }
             elif 'no' in msg_lower:
                 workflow_context['current_step'] = 1
