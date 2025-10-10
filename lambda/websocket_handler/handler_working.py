@@ -88,7 +88,7 @@ Message: "{message}"
 Sentiment:"""
         
         response = bedrock.invoke_model(
-            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+            modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 10,
