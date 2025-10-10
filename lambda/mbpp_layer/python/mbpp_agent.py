@@ -344,44 +344,11 @@ class MBPPAgent:
             }
         
         # Handle combined description+location for both text_incident and image_incident
-        if 'description' not in collected_data and 'location' not in collected_data:
-            # Use AI to extract ONLY location, keep description as-is from user
-            extraction_prompt = f"""Extract ONLY the location from this message:
-"{message}"
-
-Respond with ONLY the location address/place. If no location is mentioned, respond with empty string."""
-            
-            try:
-                response = self.bedrock_runtime.invoke_model(
-                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                    body=json.dumps({
-                        "anthropic_version": "bedrock-2023-05-31",
-                        "max_tokens": 100,
-                        "messages": [{"role": "user", "content": extraction_prompt}]
-                    })
-                )
-                result = json.loads(response['body'].read())
-                location = result['content'][0]['text'].strip()
-                collected_data['description'] = message  # Keep user's exact message as description
-                collected_data['location'] = location if location and location.lower() != 'empty string' else ""
-            except Exception as e:
-                print(f"AI extraction error: {e}")
-                collected_data['description'] = message
-                collected_data['location'] = ""
-            
-            # If location is empty, ask for it and set step to 2 (waiting for location)
-            if not collected_data['location']:
-                workflow_context['current_step'] = 2
-                collected_data['waiting_for_location'] = True
-                return {
-                    "type": "workflow",
-                    "workflow_type": workflow_type,
-                    "workflow_id": workflow_id,
-                    "response": "What is the exact location?",
-                    "session_id": session_id
-                }
-            
-            # Location was provided, move to step 3 and ask hazard question
+        # Check if waiting for location first (takes priority)
+        if collected_data.get('waiting_for_location'):
+            # User provided location after being asked
+            collected_data['location'] = message
+            collected_data['waiting_for_location'] = False
             workflow_context['current_step'] = 3
             
             # Use AI to generate hazard question based on description
@@ -419,10 +386,58 @@ Respond with ONLY the question, nothing else."""
                 "session_id": session_id,
                 "quick_replies": ["Yes", "No"]
             }
-        elif collected_data.get('waiting_for_location'):
-            # User provided location after being asked
-            collected_data['location'] = message
-            collected_data['waiting_for_location'] = False
+        elif 'description' not in collected_data and 'location' not in collected_data:
+            # Use AI to extract ONLY location, keep description as-is from user
+            extraction_prompt = f"""Extract ONLY the location/address from this message:
+"{message}"
+
+A valid Malaysian location must include:
+- Street name (Jalan/Lorong/Lebuh) OR
+- Area/Place name (Penang/Georgetown/Bayan Lepas) OR
+- Postal code (5 digits)
+
+Examples of VALID locations:
+- "Jalan Penang, Georgetown"
+- "Bayan Lepas, 11900"
+- "Lebuh Chulia"
+
+Examples of INVALID (not locations):
+- Single letters: "d", "r", "s"
+- Short words without street/area: "tree", "road", "pothole"
+
+Respond with ONLY the location if found, or empty string if no valid location exists."""
+            
+            try:
+                response = self.bedrock_runtime.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 100,
+                        "messages": [{"role": "user", "content": extraction_prompt}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                location = result['content'][0]['text'].strip()
+                collected_data['description'] = message  # Keep user's exact message as description
+                collected_data['location'] = location if location and location.lower() != 'empty string' else ""
+            except Exception as e:
+                print(f"AI extraction error: {e}")
+                collected_data['description'] = message
+                collected_data['location'] = ""
+            
+            # If location is empty, ask for it and set step to 2 (waiting for location)
+            if not collected_data['location']:
+                workflow_context['current_step'] = 2
+                collected_data['waiting_for_location'] = True
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "What is the exact location?",
+                    "session_id": session_id
+                }
+            
+            # Location was provided, move to step 3 and ask hazard question
             workflow_context['current_step'] = 3
             
             # Use AI to generate hazard question based on description
