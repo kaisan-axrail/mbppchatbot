@@ -229,7 +229,7 @@ class MBPPAgent:
         if workflow_type == 'text_incident' and current_step == 1 and has_image and image_data:
             collected_data['image_data'] = image_data
             collected_data['has_image'] = True
-            workflow_context['current_step'] = 2
+            workflow_context['current_step'] = 1  # Stay at step 1 to get description
             return {
                 "type": "workflow",
                 "workflow_type": "text_incident",
