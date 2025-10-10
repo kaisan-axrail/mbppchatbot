@@ -35,25 +35,11 @@ class MBPPWorkflowManager:
             # Skip image if too large to avoid timeout
             if image_data:
                 print(f"[CLASSIFY] Image data length: {len(image_data)}")
-                # Detect media type from data URL or default to JPEG
                 media_type = "image/jpeg"
                 if image_data.startswith('data:image'):
                     # Extract media type from data URL
                     media_type = image_data.split(';')[0].split(':')[1]
                     image_data = image_data.split(',')[1]
-                    print(f"[CLASSIFY] Extracted media type from data URL: {media_type}")
-                else:
-                    # Try to detect from base64 header
-                    if image_data.startswith('/9j/'):
-                        media_type = "image/jpeg"
-                    elif image_data.startswith('iVBORw0KGgo'):
-                        media_type = "image/png"
-                    elif image_data.startswith('R0lGOD'):
-                        media_type = "image/gif"
-                    elif image_data.startswith('UklGR'):
-                        media_type = "image/webp"
-                    print(f"[CLASSIFY] Detected media type from base64: {media_type}")
-                
                 # Only include image if reasonable size (< 1MB base64)
                 if len(image_data) < 1000000:
                     content.append({
