@@ -369,10 +369,10 @@ Respond with ONLY the location address/place. If no location is mentioned, respo
                 collected_data['description'] = message
                 collected_data['location'] = ""
             
-            workflow_context['current_step'] = 3
-            
-            # If location is empty, ask for it
+            # If location is empty, ask for it and set step to 2 (waiting for location)
             if not collected_data['location']:
+                workflow_context['current_step'] = 2
+                collected_data['waiting_for_location'] = True
                 return {
                     "type": "workflow",
                     "workflow_type": workflow_type,
@@ -380,6 +380,9 @@ Respond with ONLY the location address/place. If no location is mentioned, respo
                     "response": "What is the exact location?",
                     "session_id": session_id
                 }
+            
+            # Location was provided, move to step 3 and ask hazard question
+            workflow_context['current_step'] = 3
             
             # Use AI to generate hazard question based on description
             desc = collected_data['description']
@@ -416,9 +419,10 @@ Respond with ONLY the question, nothing else."""
                 "session_id": session_id,
                 "quick_replies": ["Yes", "No"]
             }
-        elif 'location' not in collected_data or not collected_data['location']:
+        elif collected_data.get('waiting_for_location'):
             # User provided location after being asked
             collected_data['location'] = message
+            collected_data['waiting_for_location'] = False
             workflow_context['current_step'] = 3
             
             # Use AI to generate hazard question based on description

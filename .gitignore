@@ -154,3 +154,8 @@ Thumbs.db
 
 # Web chat frontend (deployed separately)
 aeon-usersidechatbot/
+
+# Testing Lambda (local only)
+lambda/mbpp_testing/
+cdk/stacks/testing_stack.py
+test_mbpp_chatbot.sh
