@@ -27,22 +27,57 @@ class MBPPWorkflowManager:
     
     def classify_incident(self, description: str, image_data: Optional[str] = None) -> Dict[str, str]:
         """Classify incident from description and/or image into feedback, category, and sub_category using AI."""
-        # Classify feedback type using AI
-        feedback = self._classify_feedback(description, image_data)
+        try:
+            bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+            
+            content = []
+            if image_data:
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
+                })
+            
+            prompt = f"""Analyze this incident and classify it into:
+1. Feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan
+2. Category: ALAM SEKITAR, BANGUNAN, BENCANA ALAM, BINATANG, CUKAI PINTU, DISPLIN, GANGGUAN, HALANGAN, JALAN, KEBERSIHAN, KEMUDAHAN AWAM, LETAK KERETA, PENYELENGGARAAN HARTA, PERNIAGAAN, POKOK, PORTAL E-PERJAWATAN, or PUSAT HIBURAN
+3. Subcategory based on the category
+
+Description: "{description}"
+
+Respond in JSON format only:
+{{"feedback": "...", "category": "...", "sub_category": "..."}}"""
+            content.append({"type": "text", "text": prompt})
+            
+            response = bedrock.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 100,
+                    "messages": [{"role": "user", "content": content}]
+                })
+            )
+            
+            result = json.loads(response['body'].read())
+            text = result['content'][0]['text'].strip()
+            
+            # Parse JSON response
+            import re
+            json_match = re.search(r'\{[^}]+\}', text)
+            if json_match:
+                classification = json.loads(json_match.group())
+                return {
+                    "feedback": classification.get("feedback", "Aduan"),
+                    "category": classification.get("category", "JALAN"),
+                    "sub_category": classification.get("sub_category", "--")
+                }
+        except Exception as e:
+            print(f"Classification error: {e}")
         
-        # Classify category using AI
-        category = self._classify_category(description, image_data)
-        
-        # Classify subcategory based on category
-        sub_category = self._classify_subcategory(description, category, image_data)
-        
-        return {
-            "feedback": feedback,
-            "category": category,
-            "sub_category": sub_category
-        }
+        return {"feedback": "Aduan", "category": "JALAN", "sub_category": "--"}
     
-    def _classify_feedback(self, description: str, image_data: Optional[str] = None) -> str:
+    def _classify_feedback_old(self, description: str, image_data: Optional[str] = None) -> str:
         """Use AI to classify feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan"""
         try:
             bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
@@ -87,7 +122,7 @@ Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
             print(f"Feedback classification error: {e}")
             return 'Aduan'
     
-    def _classify_category(self, description: str, image_data: Optional[str] = None) -> str:
+    def _classify_category_old(self, description: str, image_data: Optional[str] = None) -> str:
         """Use AI to classify category from the MBPP category list"""
         try:
             bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
@@ -152,7 +187,7 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
             print(f"Category classification error: {e}")
             return 'JALAN'
     
-    def _classify_subcategory(self, description: str, category: str, image_data: Optional[str] = None) -> str:
+    def _classify_subcategory_old(self, description: str, category: str, image_data: Optional[str] = None) -> str:
         """Use AI to classify subcategory based on the main category"""
         # Subcategory mapping
         subcategories = {
