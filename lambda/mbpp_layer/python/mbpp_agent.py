@@ -345,28 +345,25 @@ class MBPPAgent:
         
         # Handle combined description+location for both text_incident and image_incident
         if 'description' not in collected_data and 'location' not in collected_data:
-            # Use AI to extract description and location from combined message
-            extraction_prompt = f"""Extract the incident description and location from this message:
+            # Use AI to extract ONLY location, keep description as-is from user
+            extraction_prompt = f"""Extract ONLY the location from this message:
 "{message}"
 
-Respond ONLY with JSON format:
-{{"description": "what happened", "location": "where it happened"}}
-
-If location is not mentioned, use empty string for location."""
+Respond with ONLY the location address/place. If no location is mentioned, respond with empty string."""
             
             try:
                 response = self.bedrock_runtime.invoke_model(
                     modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
                     body=json.dumps({
                         "anthropic_version": "bedrock-2023-05-31",
-                        "max_tokens": 200,
+                        "max_tokens": 100,
                         "messages": [{"role": "user", "content": extraction_prompt}]
                     })
                 )
                 result = json.loads(response['body'].read())
-                extracted = json.loads(result['content'][0]['text'])
-                collected_data['description'] = extracted.get("description", message)
-                collected_data['location'] = extracted.get("location", "")
+                location = result['content'][0]['text'].strip()
+                collected_data['description'] = message  # Keep user's exact message as description
+                collected_data['location'] = location if location and location.lower() != 'empty string' else ""
             except Exception as e:
                 print(f"AI extraction error: {e}")
                 collected_data['description'] = message
@@ -466,7 +463,7 @@ Respond with ONLY the question, nothing else."""
             # Show preview
             from strands_tools.mbpp_workflows import MBPPWorkflowManager
             manager = MBPPWorkflowManager()
-            classification = manager.classify_incident(collected_data['description'])
+            classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
             
             preview = (
                 "Please confirm these details:\n\n"
