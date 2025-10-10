@@ -242,7 +242,7 @@ class MBPPAgent:
         if collected_data.get('waiting_for_location'):
             # User provided location after being asked
             collected_data['location'] = message
-            collected_data['waiting_for_location'] = False
+            del collected_data['waiting_for_location']
             workflow_context['current_step'] = 3
             
             # Classify first
@@ -327,8 +327,8 @@ Respond with ONLY the location if found, or empty string if no valid location ex
                 collected_data['description'] = message
                 collected_data['location'] = ""
             
-            # If location is empty, ask for it and set step to 2 (waiting for location)
-            if not collected_data['location']:
+            # If location is empty or just whitespace, ask for it
+            if not collected_data.get('location', '').strip():
                 workflow_context['current_step'] = 2
                 collected_data['waiting_for_location'] = True
                 return {
