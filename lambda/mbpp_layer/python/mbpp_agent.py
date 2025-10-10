@@ -196,6 +196,7 @@ class MBPPAgent:
         current_step = workflow_context["current_step"]
         
         collected_data = workflow_context["data"]
+        print(f"[DEBUG] Continue workflow - step: {current_step}, waiting_for_location: {collected_data.get('waiting_for_location')}, has description: {'description' in collected_data}")
         
         # Handle image incident confirmation (step 0)
         if current_step == 0 and collected_data.get('has_image'):
@@ -241,24 +242,27 @@ class MBPPAgent:
         # Step 1: Get description (if not already collected)
         if current_step == 1 and 'description' not in collected_data:
             # Use AI to extract ONLY location, keep description as-is from user
-            extraction_prompt = f"""Extract ONLY the location/address from this message:
+            extraction_prompt = f"""Extract ONLY the specific location/address from this message:
 "{message}"
 
-A valid Malaysian location must include:
-- Street name (Jalan/Lorong/Lebuh) OR
-- Area/Place name (Penang/Georgetown/Bayan Lepas) OR
-- Postal code (5 digits)
+A valid Malaysian location MUST include AT LEAST ONE of:
+- Specific street name with prefix: Jalan/Lorong/Lebuh/Persiaran + street name
+- Specific area/place name: Georgetown, Bayan Lepas, Tanjung Tokong, etc.
+- Postal code: 5 digits (10xxx, 11xxx, etc.)
 
-Examples of VALID locations:
+VALID examples:
 - "Jalan Penang, Georgetown"
 - "Bayan Lepas, 11900"
 - "Lebuh Chulia"
+- "Tanjung Tokong"
 
-Examples of INVALID (not locations):
-- Single letters: "d", "r", "s"
-- Short words without street/area: "tree", "road", "pothole"
+INVALID (DO NOT extract these):
+- Generic terms: "main road", "the road", "the street"
+- Descriptive words: "tree", "pothole", "blocking"
+- Phrases like: "blocking the main road", "on the road"
 
-Respond with ONLY the location if found, or empty string if no valid location exists."""
+If NO specific location/address is mentioned, respond with empty string.
+Respond with ONLY the location or empty string, nothing else."""
             
             try:
                 response = self.bedrock_runtime.invoke_model(
@@ -282,6 +286,8 @@ Respond with ONLY the location if found, or empty string if no valid location ex
             if not collected_data.get('location', '').strip():
                 workflow_context['current_step'] = 2
                 collected_data['waiting_for_location'] = True
+                print(f"[DEBUG] Location empty, setting waiting_for_location=True, step=2")
+                print(f"[DEBUG] collected_data: {collected_data}")
                 return {
                     "type": "workflow",
                     "workflow_type": workflow_type,
@@ -338,6 +344,7 @@ Respond with ONLY the question."""
             }
         # Step 2: Waiting for location after description was provided
         elif collected_data.get('waiting_for_location'):
+            print(f"[DEBUG] Step 2: User provided location: {message}")
             # User provided location after being asked
             collected_data['location'] = message
             del collected_data['waiting_for_location']
