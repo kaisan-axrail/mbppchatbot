@@ -197,153 +197,6 @@ class MBPPAgent:
         
         collected_data = workflow_context["data"]
         
-        # Handle complaint workflow
-        if workflow_type == "complaint":
-            if current_step == 1 and 'description' not in collected_data:
-                collected_data['description'] = message
-                workflow_context['current_step'] = 2
-                return {
-                    "type": "workflow",
-                    "workflow_type": "complaint",
-                    "workflow_id": workflow_id,
-                    "response": "What is the location where you experienced this issue?",
-                    "session_id": session_id
-                }
-            elif current_step == 2 and 'location' not in collected_data:
-                collected_data['location'] = message
-                workflow_context['current_step'] = 3
-                return {
-                    "type": "workflow",
-                    "workflow_type": "complaint",
-                    "workflow_id": workflow_id,
-                    "response": "Can you please confirm if your internet connection is working properly?",
-                    "session_id": session_id,
-                    "quick_replies": [
-                        {"text": "✅ Yes", "value": "yes"},
-                        {"text": "❌ No", "value": "no"}
-                    ]
-                }
-            elif current_step == 3:
-                collected_data['verification'] = 'yes' in message.lower()
-                workflow_context['current_step'] = 4
-                
-                from strands_tools.mbpp_workflows import MBPPWorkflowManager
-                manager = MBPPWorkflowManager()
-                ticket_number = manager._generate_ticket_number()
-                
-                ticket = {
-                    "ticket_number": ticket_number,
-                    "subject": "Service Error",
-                    "details": collected_data['description'],
-                    "location": collected_data.get('location', ''),
-                    "feedback": "Aduan",
-                    "category": "Service/ System Error",
-                    "sub_category": "-",
-                    "status": "open",
-                    "created_at": datetime.now().isoformat()
-                }
-                
-                collected_data['ticket_details'] = ticket
-                
-                preview = (
-                    "Please confirm these details:\n\n"
-                    f"**Subject:** {ticket['subject']}\n\n"
-                    f"**Details:** {ticket['details']}\n\n"
-                    f"**Category:** {ticket['category']}\n\n"
-                    f"**Location:** {ticket['location']}\n\n"
-                    f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
-                    "You can:\n"
-                    "- Type 'Yes' to submit\n"
-                    "- Type 'Edit description' to change description\n"
-                    "- Type 'No' to restart"
-                )
-                
-                return {
-                    "type": "workflow",
-                    "workflow_type": "complaint",
-                    "workflow_id": workflow_id,
-                    "response": preview,
-                    "session_id": session_id,
-                    "quick_replies": [
-                        {"text": "✅ Yes, submit", "value": "yes"},
-                        {"text": "❌ No, start over", "value": "no"}
-                    ]
-                }
-            elif current_step == 4:
-                msg_lower = message.lower()
-                if 'edit description' in msg_lower:
-                    collected_data['editing_field'] = 'description'
-                    return {
-                        "type": "workflow",
-                        "workflow_type": "complaint",
-                        "workflow_id": workflow_id,
-                        "response": "Please provide the new description:",
-                        "session_id": session_id
-                    }
-                elif collected_data.get('editing_field'):
-                    # User provided new value
-                    collected_data['description'] = message
-                    collected_data.pop('editing_field', None)
-                    
-                    # Update ticket details
-                    ticket = collected_data['ticket_details']
-                    ticket['details'] = message
-                    
-                    preview = (
-                        "Please confirm these details:\n\n"
-                        f"**Subject:** {ticket['subject']}\n\n"
-                        f"**Details:** {ticket['details']}\n\n"
-                        f"**Category:** {ticket['category']}\n\n"
-                        f"**Location:** {ticket['location']}\n\n"
-                        f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
-                        "You can:\n"
-                        "- Type 'Yes' to submit\n"
-                        "- Type 'Edit description' to change description\n"
-                        "- Type 'No' to restart"
-                    )
-                    
-                    return {
-                        "type": "workflow",
-                        "workflow_type": "complaint",
-                        "workflow_id": workflow_id,
-                        "response": preview,
-                        "session_id": session_id
-                    }
-                elif 'no' in msg_lower:
-                    workflow_context['current_step'] = 1
-                    image_data = collected_data.get('image_data')
-                    workflow_context['data'] = {'image_data': image_data, 'has_image': True}
-                    return {
-                        "type": "workflow",
-                        "workflow_type": "complaint",
-                        "workflow_id": workflow_id,
-                        "response": "Let's start over. Please describe the issue.",
-                        "session_id": session_id
-                    }
-                
-                from strands_tools.mbpp_workflows import MBPPWorkflowManager
-                manager = MBPPWorkflowManager()
-                ticket = collected_data['ticket_details']
-                
-                # Save image to S3 if present
-                if collected_data.get('image_data'):
-                    image_url = manager._save_image(collected_data['image_data'], ticket['ticket_number'])
-                    if image_url:
-                        ticket['image_url'] = image_url
-                
-                manager._save_report(ticket)
-                manager._create_event('complaint_created', ticket['ticket_number'], collected_data)
-                
-                del self.active_workflows[session_id]
-                self._save_workflow_state(session_id)
-                return {
-                    "type": "workflow_complete",
-                    "workflow_type": "complaint",
-                    "workflow_id": workflow_id,
-                    "response": f"Thank you for your submission! Your reference number is {ticket['ticket_number']}",
-                    "session_id": session_id
-                }
-        
         # Handle image incident confirmation (step 0)
         if current_step == 0 and collected_data.get('has_image'):
             if 'yes' in message.lower() and 'incident' in message.lower():
@@ -359,16 +212,15 @@ class MBPPAgent:
                     "session_id": session_id
                 }
             else:
-                # User selected service complaint - switch to complaint workflow
+                # User selected service complaint - keep as incident workflow, just continue
                 image_data = collected_data.get('image_data') or workflow_context['data'].get('image_data')
-                workflow_context['workflow_type'] = 'complaint'
                 workflow_context['current_step'] = 1
                 workflow_context['data'] = {'image_data': image_data, 'has_image': True}
                 return {
                     "type": "workflow",
-                    "workflow_type": "complaint",
+                    "workflow_type": workflow_type,
                     "workflow_id": workflow_id,
-                    "response": "Thank you for your feedback. Could you please describe the issue or service/system error?\n\n(e.g. I want to complain about slow response times on a government website.)",
+                    "response": "Please describe what happened and tell us the location. You may also share your live location to make it easier.\n\n(e.g. I want to complain about a pothole at Jalan Penang, 10000, Georgetown)",
                     "session_id": session_id
                 }
         
@@ -393,18 +245,26 @@ class MBPPAgent:
             collected_data['waiting_for_location'] = False
             workflow_context['current_step'] = 3
             
-            # Use AI to generate hazard question based on description
-            desc = collected_data['description']
+            # Classify first
+            from strands_tools.mbpp_workflows import MBPPWorkflowManager
+            manager = MBPPWorkflowManager()
+            classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
+            
+            # Generate contextual hazard question
             try:
-                prompt_content = f"""Based on this incident: "{desc}"
+                prompt_content = f"""Based on:
+Description: "{collected_data['description']}"
+Category: {classification['category']}
+Subcategory: {classification['sub_category']}
 
-Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
+Generate a relevant yes/no question about urgency. Keep it under 12 words.
 Examples:
-- "Is it blocking the main road?"
-- "Is it causing immediate danger?"
-- "Is access blocked?"
+- JALAN: "Is it blocking the road?"
+- POKOK: "Is the tree blocking access?"
+- BINATANG: "Is it causing immediate danger?"
+- KEBERSIHAN: "Is it causing health hazard?"
 
-Respond with ONLY the question, nothing else."""
+Respond with ONLY the question."""
                 
                 response = self.bedrock_runtime.invoke_model(
                     modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
@@ -482,18 +342,26 @@ Respond with ONLY the location if found, or empty string if no valid location ex
             # Location was provided, move to step 3 and ask hazard question
             workflow_context['current_step'] = 3
             
-            # Use AI to generate hazard question based on description
-            desc = collected_data['description']
+            # Classify first
+            from strands_tools.mbpp_workflows import MBPPWorkflowManager
+            manager = MBPPWorkflowManager()
+            classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
+            
+            # Generate contextual hazard question
             try:
-                prompt_content = f"""Based on this incident: "{desc}"
+                prompt_content = f"""Based on:
+Description: "{collected_data['description']}"
+Category: {classification['category']}
+Subcategory: {classification['sub_category']}
 
-Generate a short yes/no question asking if it's blocking the main road or causing immediate danger. Keep it under 12 words.
+Generate a relevant yes/no question about urgency. Keep it under 12 words.
 Examples:
-- "Is it blocking the main road?"
-- "Is it causing immediate danger?"
-- "Is access blocked?"
+- JALAN: "Is it blocking the road?"
+- POKOK: "Is the tree blocking access?"
+- BINATANG: "Is it causing immediate danger?"
+- KEBERSIHAN: "Is it causing health hazard?"
 
-Respond with ONLY the question, nothing else."""
+Respond with ONLY the question."""
                 
                 response = self.bedrock_runtime.invoke_model(
                     modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
