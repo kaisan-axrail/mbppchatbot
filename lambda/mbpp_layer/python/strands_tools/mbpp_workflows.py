@@ -29,9 +29,12 @@ class MBPPWorkflowManager:
         """Classify incident from description into feedback, category, and sub_category."""
         desc_lower = description.lower()
         
+        # Classify feedback type using AI
+        feedback = self._classify_feedback(description)
+        
         # Default classification
         classification = {
-            "feedback": "Aduan",
+            "feedback": feedback,
             "category": "Lain-lain",
             "sub_category": "--"
         }
@@ -67,6 +70,42 @@ class MBPPWorkflowManager:
             classification.update({"category": "Service/ System Error", "sub_category": "--"})
         
         return classification
+    
+    def _classify_feedback(self, description: str) -> str:
+        """Use AI to classify feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan"""
+        try:
+            bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+            
+            prompt = f"""Classify this message into ONE of these feedback types:
+- Aduan (Complaint about problems/issues)
+- Cadangan (Suggestion for improvement)
+- Penghargaan (Appreciation/praise)
+- Pertanyaan (Question/inquiry)
+
+Message: "{description}"
+
+Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
+            
+            response = bedrock.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 10,
+                    "messages": [{"role": "user", "content": prompt}]
+                })
+            )
+            
+            result = json.loads(response['body'].read())
+            feedback = result['content'][0]['text'].strip()
+            
+            # Validate feedback
+            valid_feedbacks = ['Aduan', 'Cadangan', 'Penghargaan', 'Pertanyaan']
+            if feedback in valid_feedbacks:
+                return feedback
+            return 'Aduan'  # Default to Aduan
+        except Exception as e:
+            print(f"Feedback classification error: {e}")
+            return 'Aduan'  # Default to Aduan on error
     
     def detect_workflow_type(self, message: str, has_image: bool = False) -> str:
         message_lower = message.lower()
