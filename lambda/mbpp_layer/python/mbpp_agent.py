@@ -238,57 +238,8 @@ class MBPPAgent:
             }
         
         # Handle combined description+location for both text_incident and image_incident
-        # Check if waiting for location first (takes priority)
-        if collected_data.get('waiting_for_location'):
-            # User provided location after being asked
-            collected_data['location'] = message
-            del collected_data['waiting_for_location']
-            workflow_context['current_step'] = 3
-            
-            # Classify first
-            from strands_tools.mbpp_workflows import MBPPWorkflowManager
-            manager = MBPPWorkflowManager()
-            classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
-            
-            # Generate contextual hazard question
-            try:
-                prompt_content = f"""Based on:
-Description: "{collected_data['description']}"
-Category: {classification['category']}
-Subcategory: {classification['sub_category']}
-
-Generate a relevant yes/no question about urgency. Keep it under 12 words.
-Examples:
-- JALAN: "Is it blocking the road?"
-- POKOK: "Is the tree blocking access?"
-- BINATANG: "Is it causing immediate danger?"
-- KEBERSIHAN: "Is it causing health hazard?"
-
-Respond with ONLY the question."""
-                
-                response = self.bedrock_runtime.invoke_model(
-                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                    body=json.dumps({
-                        "anthropic_version": "bedrock-2023-05-31",
-                        "max_tokens": 50,
-                        "messages": [{"role": "user", "content": prompt_content}]
-                    })
-                )
-                result = json.loads(response['body'].read())
-                hazard_q = result['content'][0]['text'].strip()
-            except Exception as e:
-                print(f"AI hazard question error: {e}")
-                hazard_q = "Is it blocking the main road?"
-            
-            return {
-                "type": "workflow",
-                "workflow_type": workflow_type,
-                "workflow_id": workflow_id,
-                "response": hazard_q,
-                "session_id": session_id,
-                "quick_replies": ["Yes", "No"]
-            }
-        elif 'description' not in collected_data and 'location' not in collected_data:
+        # Step 1: Get description (if not already collected)
+        if current_step == 1 and 'description' not in collected_data:
             # Use AI to extract ONLY location, keep description as-is from user
             extraction_prompt = f"""Extract ONLY the location/address from this message:
 "{message}"
@@ -385,7 +336,58 @@ Respond with ONLY the question."""
                 "session_id": session_id,
                 "quick_replies": ["Yes", "No"]
             }
-        elif 'hazard_confirmation' not in collected_data:
+        # Step 2: Waiting for location after description was provided
+        elif collected_data.get('waiting_for_location'):
+            # User provided location after being asked
+            collected_data['location'] = message
+            del collected_data['waiting_for_location']
+            workflow_context['current_step'] = 3
+            
+            # Classify first
+            from strands_tools.mbpp_workflows import MBPPWorkflowManager
+            manager = MBPPWorkflowManager()
+            classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
+            
+            # Generate contextual hazard question
+            try:
+                prompt_content = f"""Based on:
+Description: "{collected_data['description']}"
+Category: {classification['category']}
+Subcategory: {classification['sub_category']}
+
+Generate a relevant yes/no question about urgency. Keep it under 12 words.
+Examples:
+- JALAN: "Is it blocking the road?"
+- POKOK: "Is the tree blocking access?"
+- BINATANG: "Is it causing immediate danger?"
+- KEBERSIHAN: "Is it causing health hazard?"
+
+Respond with ONLY the question."""
+                
+                response = self.bedrock_runtime.invoke_model(
+                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+                    body=json.dumps({
+                        "anthropic_version": "bedrock-2023-05-31",
+                        "max_tokens": 50,
+                        "messages": [{"role": "user", "content": prompt_content}]
+                    })
+                )
+                result = json.loads(response['body'].read())
+                hazard_q = result['content'][0]['text'].strip()
+            except Exception as e:
+                print(f"AI hazard question error: {e}")
+                hazard_q = "Is it blocking the main road?"
+            
+            return {
+                "type": "workflow",
+                "workflow_type": workflow_type,
+                "workflow_id": workflow_id,
+                "response": hazard_q,
+                "session_id": session_id,
+                "quick_replies": ["Yes", "No"]
+            }
+        # Step 3: Answer hazard question
+        elif current_step == 3 and 'hazard_confirmation' not in collected_data:
             collected_data['hazard_confirmation'] = 'yes' in message.lower()
             workflow_context['current_step'] = 4
             
