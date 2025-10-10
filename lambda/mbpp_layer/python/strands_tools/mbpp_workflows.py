@@ -25,62 +25,83 @@ class MBPPWorkflowManager:
         self.events_table = self.dynamodb.Table(events_table_name)
         self.images_bucket = os.environ.get('IMAGES_BUCKET', 'mbpp-incident-images')
     
-    def classify_incident(self, description: str) -> Dict[str, str]:
-        """Classify incident from description into feedback, category, and sub_category using AI."""
+    def classify_incident(self, description: str, image_data: Optional[str] = None) -> Dict[str, str]:
+        """Classify incident from description and/or image into feedback, category, and sub_category using AI."""
         # Classify feedback type using AI
-        feedback = self._classify_feedback(description)
+        feedback = self._classify_feedback(description, image_data)
         
         # Classify category using AI
-        category = self._classify_category(description)
+        category = self._classify_category(description, image_data)
+        
+        # Classify subcategory based on category
+        sub_category = self._classify_subcategory(description, category, image_data)
         
         return {
             "feedback": feedback,
             "category": category,
-            "sub_category": "--"
+            "sub_category": sub_category
         }
     
-    def _classify_feedback(self, description: str) -> str:
+    def _classify_feedback(self, description: str, image_data: Optional[str] = None) -> str:
         """Use AI to classify feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan"""
         try:
             bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
             
-            prompt = f"""Classify this message into ONE of these feedback types:
+            content = []
+            if image_data:
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
+                })
+            
+            prompt = f"""Classify this incident into ONE of these feedback types:
 - Aduan (Complaint about problems/issues)
 - Cadangan (Suggestion for improvement)
 - Penghargaan (Appreciation/praise)
 - Pertanyaan (Question/inquiry)
 
-Message: "{description}"
+Description: "{description}"
 
 Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
+            content.append({"type": "text", "text": prompt})
             
             response = bedrock.invoke_model(
                 modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 10,
-                    "messages": [{"role": "user", "content": prompt}]
+                    "messages": [{"role": "user", "content": content}]
                 })
             )
             
             result = json.loads(response['body'].read())
             feedback = result['content'][0]['text'].strip()
             
-            # Validate feedback
             valid_feedbacks = ['Aduan', 'Cadangan', 'Penghargaan', 'Pertanyaan']
             if feedback in valid_feedbacks:
                 return feedback
-            return 'Aduan'  # Default to Aduan
+            return 'Aduan'
         except Exception as e:
             print(f"Feedback classification error: {e}")
-            return 'Aduan'  # Default to Aduan on error
+            return 'Aduan'
     
-    def _classify_category(self, description: str) -> str:
+    def _classify_category(self, description: str, image_data: Optional[str] = None) -> str:
         """Use AI to classify category from the MBPP category list"""
         try:
             bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
             
-            prompt = f"""Classify this incident/complaint into ONE of these categories:
+            content = []
+            if image_data:
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
+                })
+            
+            prompt = f"""Classify this incident into ONE of these categories:
 - ALAM SEKITAR (Environment)
 - BANGUNAN (Building)
 - BENCANA ALAM (Natural Disaster)
@@ -99,23 +120,23 @@ Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
 - PORTAL E-PERJAWATAN (E-Portal)
 - PUSAT HIBURAN (Entertainment Center)
 
-Message: "{description}"
+Description: "{description}"
 
 Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
+            content.append({"type": "text", "text": prompt})
             
             response = bedrock.invoke_model(
                 modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 20,
-                    "messages": [{"role": "user", "content": prompt}]
+                    "messages": [{"role": "user", "content": content}]
                 })
             )
             
             result = json.loads(response['body'].read())
             category = result['content'][0]['text'].strip().upper()
             
-            # Validate category
             valid_categories = [
                 'ALAM SEKITAR', 'BANGUNAN', 'BENCANA ALAM', 'BINATANG',
                 'CUKAI PINTU', 'DISPLIN', 'GANGGUAN', 'HALANGAN', 'JALAN',
@@ -126,10 +147,136 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
             
             if category in valid_categories:
                 return category
-            return 'JALAN'  # Default to JALAN
+            return 'JALAN'
         except Exception as e:
             print(f"Category classification error: {e}")
-            return 'JALAN'  # Default to JALAN on error
+            return 'JALAN'
+    
+    def _classify_subcategory(self, description: str, category: str, image_data: Optional[str] = None) -> str:
+        """Use AI to classify subcategory based on the main category"""
+        # Subcategory mapping
+        subcategories = {
+            'ALAM SEKITAR': ['KERJA TANAH'],
+            'BANGUNAN': [
+                'TUKARGUNA BANGUNAN/PREMIS', 'HOME STAY', 'PINDAAN/TAMBAHAN',
+                'MASALAH PROJEK PEMAJUAN', 'BENGKEL/SETOR TANPA IZIN',
+                'BANGUNAN/PREMIS TANPA IZIN', 'BANGUNAN USANG/TERBIAR/RUNTUH',
+                'BANGUNAN IBADAT TANPA IZIN', 'MENARA TELEKOMUNIKASI',
+                'TEMBOK PENGHADANG', 'GERAI TANPA IZIN',
+                'PERAKUAN KELAYAKAN MENDUDUKI/OC', 'PERMOHONAN MERANCANG SISTEM 3.0 PLUS'
+            ],
+            'BENCANA ALAM': ['BANJIR', 'TANAH RUNTUH', 'POKOK TUMBANG'],
+            'BINATANG': [
+                'ANJING LIAR / TIDAK BERLESEN', 'BURUNG MERPATI/GAGAK', 'NYAMUK',
+                'KUCING LIAR', 'KACAU GANGGU SERANGGA', 'LEMBU/KAMBING/KERBAU/KUDA/UNTA',
+                'TIKUS', 'KACAU GANGGU LAIN-LAIN BINATANG', 'BURUNG WALIT'
+            ],
+            'CADANGAN': ['PELBAGAI'],
+            'CUKAI PINTU': [
+                'BIL CUKAI TAKSIRAN', 'BIL CUKAI TERTUNGGAK', 'BIL CUKAI BANTAHAN',
+                'BIL CUKAI TIDAK DITERIMA', 'TUKAR NAMA PEMILIK', 'BIL CUKAI PEMBETULAN MAKLUMAT',
+                'MASALAH CUKAI TAKSIRAN', 'TUKAR ALAMAT', 'TUKAR NAMA'
+            ],
+            'DISIPLIN': ['MASALAH KAKITANGAN MAJLIS'],
+            'GANGGUAN': ['KACAUGANGGU BISING', 'KACAUGANGGU KESIHATAN AWAM'],
+            'HALANGAN': [
+                'PERLETAKAN KENDERAAN TEPI JALAN', 'KENDERAAN LAMA', 'HALANGAN DI TEPI JALAN',
+                'HALANGAN DALAM PETAK LETAK KERETA', 'MELETAK KERETA DILUAR PETAK',
+                'KENDERAAN BERAT (BAS/LORI)', 'KAKI LIMA', 'KERUSI MEJA',
+                'PROSES TUNDA', 'PROSES KAPIT'
+            ],
+            'JALAN': [
+                'JALAN ROSAK/BERLUBANG', 'BAHU JALAN ROSAK/BERLUBANG', 'MASALAH LALULINTAS',
+                'LUBANG / MANHOLE ROSAK/HILANG', 'PAPAN TANDA TRAFIK ROSAK/HILANG',
+                'KOREKAN JALAN', 'PAPAN TANDA NAMA JALAN ROSAK/HILANG',
+                'GEGILI JALAN ROSAK/PECAH', 'BAHU JALAN RUMPUT PANJANG', 'BONGGOL JALAN'
+            ],
+            'KEBERSIHAN': [
+                'SAMPAH DOMESTIK TAK KUTIP', 'PARIT TERSUMBAT', 'KEKOTORAN JALAN',
+                'SAMPAH KEBUN TAK KUTIP', 'LONGGOKAN SAMPAH TANPA IZIN',
+                'KUTIPAN SAMPAH TIDAK MENGIKUT JADUAL', 'SAMPAH PUKAL TAK KUTIP',
+                'PEMOTONGAN RUMPUT TEPI JALAN', 'RUMAH KOSONG SEMAK SAMUN',
+                'TANAH KOSONG SEMAK SAMUN', 'LONGGOKAN SISA BINAAN', 'TIADA TONG SAMPAH',
+                'KEKOTORAN PREMIS MAKANAN', 'PENEMPATAN TONG SAMPAH TIDAK SESUAI',
+                'MASALAH KOMPLEK/PASAR/TPS', 'TANDAS AWAM KOTOR', 'KERACUNAN MAKANAN',
+                'SCHOOL', 'KAMPUNG', 'PENGKALAN'
+            ],
+            'PENGHARGAAN': ['PELBAGAI'],
+            'PERTANYAAN': ['PELBAGAI'],
+            'PORTAL E-PERJAWATAN': ['PERTANYAAN/ ADUAN JAWATAN KOSONG'],
+            'KEMUDAHAN AWAM': [
+                'LAMPU JALAN TIDAK MENYALA', 'PARIT ROSAK/RUNTUH', 'LAMPU ISYARAT ROSAK',
+                'PADANG PERMAINAN ADA SAMPAH', 'PADANG PERMAINAN RUMPUT PANJANG',
+                'PERALATAN PERMAINAN ROSAK', 'PERHENTIAN BAS ROSAK',
+                'PERMOHONAN PENGHADANG JALAN', 'TIMER LAMPU JALAN ROSAK',
+                'PERMOHONAN CERMIN FISH EYE', 'PERALATAN TANDAS AWAM ROSAK', 'CCTV',
+                'MEROSAKAN HARTA AWAM', 'SALAHGUNA KAWASAN LAPANG',
+                'PERKHIDMATAN BAS SHUTTLE', 'PENYELENGGARAAN FREE TRADE ZONE',
+                'KEROSAKAN LAMPU TAMAN MBPP', 'PENUTUP PARIT ROSAK', 'PENUTUP PARIT HILANG'
+            ],
+            'LETAK KERETA': [
+                'KOMPAUN', 'BAYARAN KOMPAUN', 'PSP', 'KEKURANGAN PETAK LETAK KERETA',
+                'PETAK LETAK KERETA KURANG JELAS', 'KOMPAUN TRAFIK'
+            ],
+            'PENYELENGGARAAN HARTA': [
+                'MASALAH COB', 'GERAI MAJLIS', 'BANGUNAN MAJLIS', 'PERUMAHAN AWAM',
+                'KEGUNAAN TANAH MAJLIS', 'PENCEROBOHAN TANAH MAJLIS'
+            ],
+            'PERNIAGAAN': [
+                'TIDAK MEMATUHI SYARAT PERLESENAN', 'KACAU GANGGU PENJAJA',
+                'PERNIAGAAN TANPA LESEN', 'PENJAJA TANPA LESEN', 'PENGIKLANAN TANPA LESEN'
+            ],
+            'POKOK': ['PEMANGKASAN POKOK', 'PENEBANGAN POKOK', 'PENYELENGGARAAN LANDSKAP'],
+            'PUSAT HIBURAN': [
+                'BEROPERASI LEBIH MASA', 'GEJALA SOSIAL', 'PUSAT HIBURAN TIDAK BERLESEN', 'CYBERCAFE'
+            ]
+        }
+        
+        # If category has no subcategories defined, return --
+        if category not in subcategories:
+            return '--'
+        
+        try:
+            bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+            
+            subs = subcategories[category]
+            subs_list = '\n'.join([f"- {s}" for s in subs])
+            
+            content = []
+            if image_data:
+                if image_data.startswith('data:image'):
+                    image_data = image_data.split(',')[1]
+                content.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
+                })
+            
+            prompt = f"""Classify this incident into ONE of these subcategories for {category}:
+{subs_list}
+
+Description: "{description}"
+
+Respond with ONLY the subcategory name."""
+            content.append({"type": "text", "text": prompt})
+            
+            response = bedrock.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 50,
+                    "messages": [{"role": "user", "content": content}]
+                })
+            )
+            
+            result = json.loads(response['body'].read())
+            sub_category = result['content'][0]['text'].strip().upper()
+            
+            if sub_category in [s.upper() for s in subs]:
+                return sub_category
+            return subs[0]
+        except Exception as e:
+            print(f"Subcategory classification error: {e}")
+            return subcategories[category][0] if category in subcategories else '--'
     
     def detect_workflow_type(self, message: str, has_image: bool = False) -> str:
         message_lower = message.lower()
@@ -195,7 +342,6 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
                 'feedback': ticket.get('feedback', 'Aduan'),
                 'category': ticket.get('category', ''),
                 'sub_category': ticket.get('sub_category', ''),
-                'blocked_road': str(ticket.get('blocked_road', False)),
                 'created_at': ticket['created_at'],
                 'status': 'open',
                 'ttl': int(datetime.now().timestamp()) + (90 * 24 * 60 * 60)
@@ -253,14 +399,20 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
             workflow["current_step"] = 3
             workflow["data"]["verification"] = data.get("verification")
             
+            # Classify complaint
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
+            
             ticket_number = self._generate_ticket_number()
             ticket = {
                 "ticket_number": ticket_number,
                 "subject": "Service Error",
                 "details": workflow["data"]["description"],
-                "feedback": "Aduan",
-                "category": "Service/ System Error",
-                "sub_category": "-",
+                "feedback": classification["feedback"],
+                "category": classification["category"],
+                "sub_category": classification["sub_category"],
                 "created_at": datetime.now().isoformat()
             }
             
@@ -272,8 +424,7 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
                 f"**Feedback:** {ticket['feedback']}\n\n"
                 f"**Subject:** {ticket['subject']}\n\n"
                 f"**Details:** {ticket['details']}\n\n"
-                f"**Category:** {ticket['category']}\n\n"
-                f"**Internet verified:** {'Yes' if workflow['data'].get('verification') else 'No'}\n\n"
+                f"**Category:** {ticket['category']} - {ticket['sub_category']}\n\n"
                 "Is this correct?"
             )
             
@@ -353,7 +504,10 @@ Respond with ONLY the question, nothing else."""
             workflow["data"]["hazard_confirmation"] = data.get("hazard_confirmation")
             
             # Classify incident and prepare ticket (don't save yet)
-            classification = self.classify_incident(workflow["data"]["description"])
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
             
             ticket_number = self._generate_ticket_number()
             ticket = {
@@ -364,7 +518,6 @@ Respond with ONLY the question, nothing else."""
                 "feedback": classification["feedback"],
                 "category": classification["category"],
                 "sub_category": classification["sub_category"],
-                "blocked_road": workflow["data"]["hazard_confirmation"],
                 "created_at": datetime.now().isoformat()
             }
             
@@ -378,8 +531,8 @@ Respond with ONLY the question, nothing else."""
 Ticket #: {ticket_number}
 Description: {ticket['details']}
 Location: {ticket['location']}
+Feedback: {ticket['feedback']}
 Category: {ticket['category']} - {ticket['sub_category']}
-Blocking Road: {'Yes' if ticket['blocked_road'] else 'No'}
 
 Is this correct? (Yes to submit / No to restart)"""
             
@@ -433,8 +586,11 @@ Is this correct? (Yes to submit / No to restart)"""
             workflow["current_step"] = 4
             workflow["data"]["hazard_confirmation"] = data.get("hazard_confirmation")
             
-            # Classify incident from description
-            classification = self.classify_incident(workflow["data"]["description"])
+            # Classify incident from description and image
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
             
             ticket_number = self._generate_ticket_number()
             ticket = {
@@ -445,7 +601,6 @@ Is this correct? (Yes to submit / No to restart)"""
                 "feedback": classification["feedback"],
                 "category": classification["category"],
                 "sub_category": classification["sub_category"],
-                "blocked_road": workflow["data"]["hazard_confirmation"],
                 "created_at": datetime.now().isoformat()
             }
             
