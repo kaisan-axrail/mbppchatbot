@@ -252,7 +252,10 @@ class MBPPAgent:
                     f"**Category:** {ticket['category']}\n\n"
                     f"**Location:** {ticket['location']}\n\n"
                     f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
-                    "Is this correct?"
+                    "You can:\n"
+                    "- Type 'Yes' to submit\n"
+                    "- Type 'Edit description' to change description\n"
+                    "- Type 'No' to restart"
                 )
                 
                 return {
@@ -267,7 +270,46 @@ class MBPPAgent:
                     ]
                 }
             elif current_step == 4:
-                if 'no' in message.lower():
+                msg_lower = message.lower()
+                if 'edit description' in msg_lower:
+                    collected_data['editing_field'] = 'description'
+                    return {
+                        "type": "workflow",
+                        "workflow_type": "complaint",
+                        "workflow_id": workflow_id,
+                        "response": "Please provide the new description:",
+                        "session_id": session_id
+                    }
+                elif collected_data.get('editing_field'):
+                    # User provided new value
+                    collected_data['description'] = message
+                    collected_data.pop('editing_field', None)
+                    
+                    # Update ticket details
+                    ticket = collected_data['ticket_details']
+                    ticket['details'] = message
+                    
+                    preview = (
+                        "Please confirm these details:\n\n"
+                        f"**Subject:** {ticket['subject']}\n\n"
+                        f"**Details:** {ticket['details']}\n\n"
+                        f"**Category:** {ticket['category']}\n\n"
+                        f"**Location:** {ticket['location']}\n\n"
+                        f"**Internet verified:** {'Yes' if collected_data.get('verification') else 'No'}\n\n"
+                        "You can:\n"
+                        "- Type 'Yes' to submit\n"
+                        "- Type 'Edit description' to change description\n"
+                        "- Type 'No' to restart"
+                    )
+                    
+                    return {
+                        "type": "workflow",
+                        "workflow_type": "complaint",
+                        "workflow_id": workflow_id,
+                        "response": preview,
+                        "session_id": session_id
+                    }
+                elif 'no' in msg_lower:
                     workflow_context['current_step'] = 1
                     image_data = collected_data.get('image_data')
                     workflow_context['data'] = {'image_data': image_data, 'has_image': True}
@@ -493,7 +535,11 @@ Respond with ONLY the question, nothing else."""
                 f"**Sub-category:** {classification['sub_category']}\n\n"
                 f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
                 f"**Location:** {collected_data['location']}\n\n"
-                "Is this correct?"
+                "You can:\n"
+                "- Type 'Yes' to submit\n"
+                "- Type 'Edit description' to change description\n"
+                "- Type 'Edit location' to change location\n"
+                "- Type 'No' to restart"
             )
             
             collected_data['preview_classification'] = classification
@@ -502,15 +548,69 @@ Respond with ONLY the question, nothing else."""
                 "workflow_type": workflow_type,
                 "workflow_id": workflow_id,
                 "response": preview,
-                "session_id": session_id,
-                "quick_replies": [
-                    {"text": "✅ Yes, submit", "value": "yes"},
-                    {"text": "❌ No, start over", "value": "no"}
-                ]
+                "session_id": session_id
             }
         else:
-            # Final confirmation
-            if 'no' in message.lower():
+            # Check if user wants to edit a field
+            msg_lower = message.lower()
+            if 'edit description' in msg_lower:
+                collected_data['editing_field'] = 'description'
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "Please provide the new description:",
+                    "session_id": session_id
+                }
+            elif 'edit location' in msg_lower:
+                collected_data['editing_field'] = 'location'
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "Please provide the new location:",
+                    "session_id": session_id
+                }
+            elif collected_data.get('editing_field'):
+                # User provided new value for field
+                field = collected_data['editing_field']
+                if field == 'description':
+                    collected_data['description'] = message
+                elif field == 'location':
+                    collected_data['location'] = message
+                
+                # Re-classify with updated data
+                from strands_tools.mbpp_workflows import MBPPWorkflowManager
+                manager = MBPPWorkflowManager()
+                classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
+                collected_data['preview_classification'] = classification
+                collected_data.pop('editing_field', None)
+                
+                # Show updated preview
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** Incident Report\n\n"
+                    f"**Details:** {collected_data['description']}\n\n"
+                    f"**Feedback:** {classification['feedback']}\n\n"
+                    f"**Category:** {classification['category']}\n\n"
+                    f"**Sub-category:** {classification['sub_category']}\n\n"
+                    f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                    f"**Location:** {collected_data['location']}\n\n"
+                    "You can:\n"
+                    "- Type 'Yes' to submit\n"
+                    "- Type 'Edit description' to change description\n"
+                    "- Type 'Edit location' to change location\n"
+                    "- Type 'No' to restart"
+                )
+                
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": preview,
+                    "session_id": session_id
+                }
+            elif 'no' in msg_lower:
                 workflow_context['current_step'] = 1
                 workflow_context['data'] = {}
                 return {

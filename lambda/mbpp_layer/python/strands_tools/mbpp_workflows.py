@@ -474,11 +474,59 @@ Respond with ONLY the subcategory name."""
             
             preview = (
                 "Please confirm these details:\n\n"
-                f"**Feedback:** {ticket['feedback']}\n\n"
-                f"**Subject:** {ticket['subject']}\n\n"
-                f"**Details:** {ticket['details']}\n\n"
-                f"**Category:** {ticket['category']} - {ticket['sub_category']}\n\n"
-                "Is this correct?"
+                f"Ticket #: {ticket_number}\n"
+                f"Subject: {ticket['subject']}\n"
+                f"Details: {ticket['details']}\n"
+                f"Feedback: {ticket['feedback']}\n"
+                f"Category: {ticket['category']} - {ticket['sub_category']}\n\n"
+                "You can:\n"
+                "- Type 'Yes' to submit\n"
+                "- Type 'Edit description' to change description\n"
+                "- Type 'No' to restart"
+            )
+            
+            return {"status": "success", "step": 3, "message": preview, "workflow_id": workflow_id}
+        
+        elif action == "edit_description":
+            workflow = self.workflows.get(workflow_id)
+            workflow["data"]["editing_field"] = "description"
+            return {"status": "success", "message": "Please provide the new description:", "workflow_id": workflow_id}
+        
+        elif action == "update_field":
+            workflow = self.workflows.get(workflow_id)
+            field = workflow["data"].get("editing_field")
+            new_value = data.get("value")
+            
+            if field == "description":
+                workflow["data"]["description"] = new_value
+            
+            # Re-classify with updated data
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
+            
+            # Update ticket details
+            ticket = workflow["ticket_details"]
+            ticket["details"] = workflow["data"]["description"]
+            ticket["feedback"] = classification["feedback"]
+            ticket["category"] = classification["category"]
+            ticket["sub_category"] = classification["sub_category"]
+            
+            workflow["data"].pop("editing_field", None)
+            
+            # Show updated confirmation
+            preview = (
+                "Please confirm these details:\n\n"
+                f"Ticket #: {ticket['ticket_number']}\n"
+                f"Subject: {ticket['subject']}\n"
+                f"Details: {ticket['details']}\n"
+                f"Feedback: {ticket['feedback']}\n"
+                f"Category: {ticket['category']} - {ticket['sub_category']}\n\n"
+                "You can:\n"
+                "- Type 'Yes' to submit\n"
+                "- Type 'Edit description' to change description\n"
+                "- Type 'No' to restart"
             )
             
             return {"status": "success", "step": 3, "message": preview, "workflow_id": workflow_id}
@@ -578,7 +626,7 @@ Respond with ONLY the question, nothing else."""
             workflow["ticket_number"] = ticket_number
             workflow["ticket_details"] = ticket
             
-            # Show ticket details for confirmation
+            # Show ticket details for confirmation with edit options
             confirmation_msg = f"""Please confirm these details:
 
 Ticket #: {ticket_number}
@@ -587,7 +635,64 @@ Location: {ticket['location']}
 Feedback: {ticket['feedback']}
 Category: {ticket['category']} - {ticket['sub_category']}
 
-Is this correct? (Yes to submit / No to restart)"""
+You can:
+- Type 'Yes' to submit
+- Type 'Edit description' to change description
+- Type 'Edit location' to change location
+- Type 'No' to restart"""
+            
+            return {"status": "success", "step": 4, "message": confirmation_msg, "workflow_id": workflow_id}
+        
+        elif action == "edit_description":
+            workflow = self.workflows.get(workflow_id)
+            workflow["data"]["editing_field"] = "description"
+            return {"status": "success", "message": "Please provide the new description:", "workflow_id": workflow_id}
+        
+        elif action == "edit_location":
+            workflow = self.workflows.get(workflow_id)
+            workflow["data"]["editing_field"] = "location"
+            return {"status": "success", "message": "Please provide the new location:", "workflow_id": workflow_id}
+        
+        elif action == "update_field":
+            workflow = self.workflows.get(workflow_id)
+            field = workflow["data"].get("editing_field")
+            new_value = data.get("value")
+            
+            if field == "description":
+                workflow["data"]["description"] = new_value
+            elif field == "location":
+                workflow["data"]["location"] = new_value
+            
+            # Re-classify with updated data
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
+            
+            # Update ticket details
+            ticket = workflow["ticket_details"]
+            ticket["details"] = workflow["data"]["description"]
+            ticket["location"] = workflow["data"]["location"]
+            ticket["feedback"] = classification["feedback"]
+            ticket["category"] = classification["category"]
+            ticket["sub_category"] = classification["sub_category"]
+            
+            workflow["data"].pop("editing_field", None)
+            
+            # Show updated confirmation
+            confirmation_msg = f"""Please confirm these details:
+
+Ticket #: {ticket['ticket_number']}
+Description: {ticket['details']}
+Location: {ticket['location']}
+Feedback: {ticket['feedback']}
+Category: {ticket['category']} - {ticket['sub_category']}
+
+You can:
+- Type 'Yes' to submit
+- Type 'Edit description' to change description
+- Type 'Edit location' to change location
+- Type 'No' to restart"""
             
             return {"status": "success", "step": 4, "message": confirmation_msg, "workflow_id": workflow_id}
         
@@ -657,20 +762,101 @@ Is this correct? (Yes to submit / No to restart)"""
                 "created_at": datetime.now().isoformat()
             }
             
+            # Store ticket in workflow context (don't save yet)
+            workflow["ticket_number"] = ticket_number
+            workflow["ticket_details"] = ticket
+            
+            # Show confirmation with edit options
+            confirmation_msg = f"""Please confirm these details:
+
+Ticket #: {ticket_number}
+Description: {ticket['details']}
+Location: {ticket['location']}
+Feedback: {ticket['feedback']}
+Category: {ticket['category']} - {ticket['sub_category']}
+
+You can:
+- Type 'Yes' to submit
+- Type 'Edit description' to change description
+- Type 'Edit location' to change location
+- Type 'No' to restart"""
+            
+            return {"status": "success", "step": 4, "message": confirmation_msg, "workflow_id": workflow_id}
+        
+        elif action == "edit_description":
+            workflow = self.workflows.get(workflow_id)
+            workflow["data"]["editing_field"] = "description"
+            return {"status": "success", "message": "Please provide the new description:", "workflow_id": workflow_id}
+        
+        elif action == "edit_location":
+            workflow = self.workflows.get(workflow_id)
+            workflow["data"]["editing_field"] = "location"
+            return {"status": "success", "message": "Please provide the new location:", "workflow_id": workflow_id}
+        
+        elif action == "update_field":
+            workflow = self.workflows.get(workflow_id)
+            field = workflow["data"].get("editing_field")
+            new_value = data.get("value")
+            
+            if field == "description":
+                workflow["data"]["description"] = new_value
+            elif field == "location":
+                workflow["data"]["location"] = new_value
+            
+            # Re-classify with updated data
+            classification = self.classify_incident(
+                workflow["data"]["description"],
+                workflow["data"].get("image")
+            )
+            
+            # Update ticket details
+            ticket = workflow["ticket_details"]
+            ticket["details"] = workflow["data"]["description"]
+            ticket["location"] = workflow["data"]["location"]
+            ticket["feedback"] = classification["feedback"]
+            ticket["category"] = classification["category"]
+            ticket["sub_category"] = classification["sub_category"]
+            
+            workflow["data"].pop("editing_field", None)
+            
+            # Show updated confirmation
+            confirmation_msg = f"""Please confirm these details:
+
+Ticket #: {ticket['ticket_number']}
+Description: {ticket['details']}
+Location: {ticket['location']}
+Feedback: {ticket['feedback']}
+Category: {ticket['category']} - {ticket['sub_category']}
+
+You can:
+- Type 'Yes' to submit
+- Type 'Edit description' to change description
+- Type 'Edit location' to change location
+- Type 'No' to restart"""
+            
+            return {"status": "success", "step": 4, "message": confirmation_msg, "workflow_id": workflow_id}
+        
+        elif action == "confirm":
+            workflow = self.workflows.get(workflow_id)
+            confirmation = data.get("confirmation")
+            
+            if confirmation == "no":
+                workflow["current_step"] = 1
+                workflow["data"] = {"image": workflow["data"].get("image")}
+                return {"status": "success", "message": "Let's start over. Please describe what happened.", "workflow_id": workflow_id}
+            
+            # Save to DynamoDB
+            ticket = workflow["ticket_details"]
+            
             if workflow["data"].get("image"):
-                image_url = self._save_image(workflow["data"]["image"], ticket_number)
+                image_url = self._save_image(workflow["data"]["image"], ticket["ticket_number"])
                 if image_url:
                     ticket["image_url"] = image_url
             
             self._save_report(ticket)
-            self._create_event('incident_created', ticket_number, workflow["data"])
-            workflow["ticket_number"] = ticket_number
-            
-            return {"status": "success", "step": 4, "message": "Logging the ticket...", "ticket": ticket, "workflow_id": workflow_id}
-        
-        elif action == "confirm":
-            workflow = self.workflows.get(workflow_id)
+            self._create_event('incident_created', ticket["ticket_number"], workflow["data"])
             workflow["status"] = "completed"
+            
             return {"status": "success", "message": f"Thank you for your submission, a complaint ticket has been logged and the reference number is {workflow['ticket_number']}", "ticket_number": workflow["ticket_number"], "workflow_id": workflow_id}
     
     def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
