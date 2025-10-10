@@ -16,7 +16,6 @@ from .storage_stack import StorageStack
 from .lambda_stack import LambdaStack
 from .api_stack import ApiStack
 from .mbpp_workflow_stack import MBPPWorkflowStack
-from .testing_stack import MBPPTestingStack
 
 
 class PipelineStack(Stack):
@@ -102,9 +101,4 @@ class ApplicationStage(Stage):
         api_stack = ApiStack(
             self, "Api",
             websocket_handler=lambda_stack.websocket_handler
-        )
-        
-        testing_stack = MBPPTestingStack(
-            self, "Testing",
-            websocket_handler_arn=lambda_stack.websocket_handler.function_arn
         )
