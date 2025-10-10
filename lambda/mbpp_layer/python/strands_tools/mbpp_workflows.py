@@ -26,50 +26,18 @@ class MBPPWorkflowManager:
         self.images_bucket = os.environ.get('IMAGES_BUCKET', 'mbpp-incident-images')
     
     def classify_incident(self, description: str) -> Dict[str, str]:
-        """Classify incident from description into feedback, category, and sub_category."""
-        desc_lower = description.lower()
-        
+        """Classify incident from description into feedback, category, and sub_category using AI."""
         # Classify feedback type using AI
         feedback = self._classify_feedback(description)
         
-        # Default classification
-        classification = {
+        # Classify category using AI
+        category = self._classify_category(description)
+        
+        return {
             "feedback": feedback,
-            "category": "Lain-lain",
+            "category": category,
             "sub_category": "--"
         }
-        
-        # Natural Disaster (Bencana Alam)
-        if any(k in desc_lower for k in ['fallen tree', 'pokok tumbang', 'tree fall', 'pohon tumbang']):
-            classification.update({"category": "Bencana Alam", "sub_category": "Pokok Tumbang"})
-        elif any(k in desc_lower for k in ['flood', 'banjir', 'water overflow', 'flooded']):
-            classification.update({"category": "Bencana Alam", "sub_category": "Banjir"})
-        elif any(k in desc_lower for k in ['landslide', 'tanah runtuh', 'soil collapse']):
-            classification.update({"category": "Bencana Alam", "sub_category": "Tanah Runtuh"})
-        
-        # Road Issues (Jalan Raya)
-        elif any(k in desc_lower for k in ['pothole', 'lubang jalan', 'road hole', 'damaged road']):
-            classification.update({"category": "Jalan Raya", "sub_category": "Lubang Jalan"})
-        elif any(k in desc_lower for k in ['crack', 'retak jalan', 'road crack']):
-            classification.update({"category": "Jalan Raya", "sub_category": "Jalan Retak"})
-        
-        # Infrastructure (Infrastruktur)
-        elif any(k in desc_lower for k in ['street light', 'lampu jalan', 'lamp', 'lighting']):
-            classification.update({"category": "Infrastruktur", "sub_category": "Lampu Jalan"})
-        elif any(k in desc_lower for k in ['drain', 'longkang', 'parit', 'drainage']):
-            classification.update({"category": "Infrastruktur", "sub_category": "Longkang"})
-        elif any(k in desc_lower for k in ['traffic light', 'lampu isyarat', 'signal']):
-            classification.update({"category": "Infrastruktur", "sub_category": "Lampu Isyarat"})
-        
-        # Waste Management (Pengurusan Sampah)
-        elif any(k in desc_lower for k in ['garbage', 'sampah', 'trash', 'rubbish', 'waste']):
-            classification.update({"category": "Pengurusan Sampah", "sub_category": "Sampah Berserakan"})
-        
-        # Service/System Error
-        elif any(k in desc_lower for k in ['website', 'system', 'service', 'app', 'online', 'portal']):
-            classification.update({"category": "Service/ System Error", "sub_category": "--"})
-        
-        return classification
     
     def _classify_feedback(self, description: str) -> str:
         """Use AI to classify feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan"""
@@ -106,6 +74,62 @@ Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
         except Exception as e:
             print(f"Feedback classification error: {e}")
             return 'Aduan'  # Default to Aduan on error
+    
+    def _classify_category(self, description: str) -> str:
+        """Use AI to classify category from the MBPP category list"""
+        try:
+            bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
+            
+            prompt = f"""Classify this incident/complaint into ONE of these categories:
+- ALAM SEKITAR (Environment)
+- BANGUNAN (Building)
+- BENCANA ALAM (Natural Disaster)
+- BINATANG (Animals)
+- CUKAI PINTU (Property Tax)
+- DISPLIN (Discipline)
+- GANGGUAN (Disturbance)
+- HALANGAN (Obstruction)
+- JALAN (Road)
+- KEBERSIHAN (Cleanliness)
+- KEMUDAHAN AWAM (Public Facilities)
+- LETAK KERETA (Parking)
+- PENYELENGGARAAN HARTA (Property Maintenance)
+- PERNIAGAAN (Business)
+- POKOK (Trees)
+- PORTAL E-PERJAWATAN (E-Portal)
+- PUSAT HIBURAN (Entertainment Center)
+
+Message: "{description}"
+
+Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
+            
+            response = bedrock.invoke_model(
+                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                body=json.dumps({
+                    "anthropic_version": "bedrock-2023-05-31",
+                    "max_tokens": 20,
+                    "messages": [{"role": "user", "content": prompt}]
+                })
+            )
+            
+            result = json.loads(response['body'].read())
+            category = result['content'][0]['text'].strip().upper()
+            
+            # Validate category
+            valid_categories = [
+                'ALAM SEKITAR', 'BANGUNAN', 'BENCANA ALAM', 'BINATANG',
+                'CUKAI PINTU', 'DISPLIN', 'GANGGUAN', 'HALANGAN', 'JALAN',
+                'KEBERSIHAN', 'KEMUDAHAN AWAM', 'LETAK KERETA',
+                'PENYELENGGARAAN HARTA', 'PERNIAGAAN', 'POKOK',
+                'PORTAL E-PERJAWATAN', 'PUSAT HIBURAN'
+            ]
+            
+            if category in valid_categories:
+                return category
+            return 'JALAN'  # Default to JALAN
+        except Exception as e:
+            print(f"Category classification error: {e}")
+            return 'JALAN'  # Default to JALAN on error
     
     def detect_workflow_type(self, message: str, has_image: bool = False) -> str:
         message_lower = message.lower()
