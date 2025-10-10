@@ -75,7 +75,7 @@ class McpServerConstruct(Construct):
                                 "bedrock:Retrieve"
                             ],
                             resources=[
-                                f"arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
+                                f"arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0",
                                 f"arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v1",
                                 f"arn:aws:bedrock:*::foundation-model/cohere.embed-english-v3",
                                 f"arn:aws:bedrock:*::foundation-model/cohere.embed-multilingual-v3",

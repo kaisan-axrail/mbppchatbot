@@ -27,17 +27,25 @@ class MBPPWorkflowManager:
     
     def classify_incident(self, description: str, image_data: Optional[str] = None) -> Dict[str, str]:
         """Classify incident from description and/or image into feedback, category, and sub_category using AI."""
+        print(f"[CLASSIFY] Starting classification - has_image: {bool(image_data)}")
         try:
             bedrock = boto3.client('bedrock-runtime', region_name=os.environ.get('BEDROCK_REGION', 'us-east-1'))
             
             content = []
+            # Skip image if too large to avoid timeout
             if image_data:
+                print(f"[CLASSIFY] Image data length: {len(image_data)}")
                 if image_data.startswith('data:image'):
                     image_data = image_data.split(',')[1]
-                content.append({
-                    "type": "image",
-                    "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
-                })
+                # Only include image if reasonable size (< 1MB base64)
+                if len(image_data) < 1000000:
+                    content.append({
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": "image/jpeg", "data": image_data}
+                    })
+                    print(f"[CLASSIFY] Image included in classification")
+                else:
+                    print(f"[CLASSIFY] Image too large, skipping vision analysis")
             
             prompt = f"""Analyze this incident and classify it into:
 1. Feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan
@@ -50,8 +58,9 @@ Respond in JSON format only:
 {{"feedback": "...", "category": "...", "sub_category": "..."}}"""
             content.append({"type": "text", "text": prompt})
             
+            print(f"[CLASSIFY] Calling Bedrock API...")
             response = bedrock.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 100,
@@ -61,20 +70,26 @@ Respond in JSON format only:
             
             result = json.loads(response['body'].read())
             text = result['content'][0]['text'].strip()
+            print(f"[CLASSIFY] API response: {text}")
             
             # Parse JSON response
             import re
             json_match = re.search(r'\{[^}]+\}', text)
             if json_match:
                 classification = json.loads(json_match.group())
-                return {
+                result = {
                     "feedback": classification.get("feedback", "Aduan"),
                     "category": classification.get("category", "JALAN"),
                     "sub_category": classification.get("sub_category", "--")
                 }
+                print(f"[CLASSIFY] Success: {result}")
+                return result
         except Exception as e:
-            print(f"Classification error: {e}")
+            print(f"[CLASSIFY] ERROR: {e}")
+            import traceback
+            traceback.print_exc()
         
+        print(f"[CLASSIFY] Returning default classification")
         return {"feedback": "Aduan", "category": "JALAN", "sub_category": "--"}
     
     def _classify_feedback_old(self, description: str, image_data: Optional[str] = None) -> str:
@@ -103,7 +118,7 @@ Respond with ONLY ONE WORD: Aduan, Cadangan, Penghargaan, or Pertanyaan."""
             content.append({"type": "text", "text": prompt})
             
             response = bedrock.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 10,
@@ -161,7 +176,7 @@ Respond with ONLY the category name (e.g., JALAN, BENCANA ALAM, etc.)."""
             content.append({"type": "text", "text": prompt})
             
             response = bedrock.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 20,
@@ -295,7 +310,7 @@ Respond with ONLY the subcategory name."""
             content.append({"type": "text", "text": prompt})
             
             response = bedrock.invoke_model(
-                modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
                 body=json.dumps({
                     "anthropic_version": "bedrock-2023-05-31",
                     "max_tokens": 50,

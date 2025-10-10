@@ -72,7 +72,7 @@ class StrandClient:
         
         # Inference profile configuration (preferred)
         self.inference_profile_arn = os.environ.get('BEDROCK_INFERENCE_PROFILE_ARN')
-        self.cross_region_profile = os.environ.get('BEDROCK_CROSS_REGION_PROFILE', 'us.anthropic.claude-3-5-sonnet-20241022-v2:0')
+        self.cross_region_profile = os.environ.get('BEDROCK_CROSS_REGION_PROFILE', 'us.anthropic.claude-3-5-sonnet-20240620-v1:0')
         
         # Fallback model configuration
         self.model_id = os.environ.get('BEDROCK_CLAUDE_MODEL', 'anthropic.claude-sonnet-4-20250514-v1:0')

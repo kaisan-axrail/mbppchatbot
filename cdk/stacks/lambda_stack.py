@@ -117,7 +117,7 @@ class LambdaStack(Stack):
                                 "bedrock:RetrieveAndGenerate"
                             ],
                             resources=[
-                                f"arn:aws:bedrock:{self.region}::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0",
+                                f"arn:aws:bedrock:{self.region}::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0",
                                 f"arn:aws:bedrock:{self.region}::foundation-model/amazon.titan-embed-text-v1",
                                 # Add Nova Pro inference profile access
                                 f"arn:aws:bedrock:*:*:foundation-model/*",
@@ -238,7 +238,7 @@ class LambdaStack(Stack):
                 "BEDROCK_INFERENCE_PROFILE_ARN": "",  # Set this for production deployment
                 "BEDROCK_CROSS_REGION_PROFILE": "apac.amazon.nova-pro-v1:0",
                 # Fallback model configuration
-                "BEDROCK_CLAUDE_MODEL": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                "BEDROCK_CLAUDE_MODEL": "anthropic.claude-3-5-sonnet-20240620-v1:0",
                 "USE_CROSS_REGION_INFERENCE": "true",
                 "BEDROCK_EMBEDDING_MODEL": "amazon.titan-embed-text-v1",
                 # Circuit breaker configuration
