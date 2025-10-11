@@ -1,6 +1,0 @@
-{
-  "documents_bucket": "chatbot-documents-836581769622-ap-southeast-1",
-  "processed_bucket": "chatbot-processed-docs-836581769622-ap-southeast-1",
-  "upload_prefix": "uploads/",
-  "region": "ap-southeast-1"
-}

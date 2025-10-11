@@ -1,4 +1,0 @@
-strands
-strands-tools
-boto3
-requests
