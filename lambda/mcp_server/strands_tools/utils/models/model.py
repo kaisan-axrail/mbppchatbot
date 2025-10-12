@@ -11,7 +11,7 @@ from strands.models import Model
 
 # Default model configuration for Bedrock
 DEFAULT_MODEL_CONFIG = {
-    "model_id": os.getenv("STRANDS_MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0"),
+    "model_id": os.getenv("STRANDS_MODEL_ID", "us.anthropic.claude-3-5-sonnet-20240620-v1:0"),
     "max_tokens": int(os.getenv("STRANDS_MAX_TOKENS", "10000")),
     "boto_client_config": Config(
         read_timeout=int(os.getenv("STRANDS_BOTO_READ_TIMEOUT", "900")),
@@ -193,7 +193,7 @@ def get_provider_config(provider: str) -> dict[str, Any]:
     """
     if provider == "bedrock":
         return {
-            "model_id": os.getenv("STRANDS_MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0"),
+            "model_id": os.getenv("STRANDS_MODEL_ID", "us.anthropic.claude-3-5-sonnet-20240620-v1:0"),
             "max_tokens": int(os.getenv("STRANDS_MAX_TOKENS", "10000")),
             "boto_client_config": Config(
                 read_timeout=900,
@@ -211,7 +211,7 @@ def get_provider_config(provider: str) -> dict[str, Any]:
                 "api_key": os.getenv("ANTHROPIC_API_KEY"),
             },
             "max_tokens": int(os.getenv("STRANDS_MAX_TOKENS", "10000")),
-            "model_id": os.getenv("STRANDS_MODEL_ID", "claude-sonnet-4-20250514"),
+            "model_id": os.getenv("STRANDS_MODEL_ID", "claude-3-5-sonnet-20240620"),
             "params": {
                 "temperature": float(os.getenv("STRANDS_TEMPERATURE", "1")),
             },
@@ -224,7 +224,7 @@ def get_provider_config(provider: str) -> dict[str, Any]:
 
         return {
             "client_args": client_args,
-            "model_id": os.getenv("STRANDS_MODEL_ID", "anthropic/claude-sonnet-4-20250514"),
+            "model_id": os.getenv("STRANDS_MODEL_ID", "anthropic/claude-3-5-sonnet-20240620"),
             "params": {
                 "max_tokens": int(os.getenv("STRANDS_MAX_TOKENS", "10000")),
                 "temperature": float(os.getenv("STRANDS_TEMPERATURE", "1")),
@@ -320,7 +320,7 @@ def get_provider_info(provider: str) -> dict[str, Any]:
         "bedrock": {
             "name": "Amazon Bedrock",
             "description": "Amazon's managed foundation model service",
-            "default_model": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+            "default_model": "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
             "env_vars": [
                 "STRANDS_MODEL_ID",
                 "STRANDS_MAX_TOKENS",
@@ -331,7 +331,7 @@ def get_provider_info(provider: str) -> dict[str, Any]:
         "anthropic": {
             "name": "Anthropic",
             "description": "Direct access to Anthropic's Claude models",
-            "default_model": "claude-sonnet-4-20250514",
+            "default_model": "claude-3-5-sonnet-20240620",
             "env_vars": [
                 "ANTHROPIC_API_KEY",
                 "STRANDS_MODEL_ID",
@@ -342,7 +342,7 @@ def get_provider_info(provider: str) -> dict[str, Any]:
         "litellm": {
             "name": "LiteLLM",
             "description": "Unified interface for multiple LLM providers",
-            "default_model": "anthropic/claude-sonnet-4-20250514",
+            "default_model": "anthropic/claude-3-5-sonnet-20240620",
             "env_vars": [
                 "LITELLM_API_KEY",
                 "LITELLM_BASE_URL",

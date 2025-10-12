@@ -49,7 +49,7 @@ result = agent.tool.swarm(
             ),
             "tools": ["retrieve", "calculator"],
             "model_provider": "bedrock",
-            "model_settings": {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
+            "model_settings": {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"}
         },
         {
             "name": "product_strategist",
@@ -59,7 +59,7 @@ result = agent.tool.swarm(
             ),
             "tools": ["file_write", "calculator"],
             "model_provider": "anthropic",
-            "model_settings": {"model_id": "claude-sonnet-4-20250514"}
+            "model_settings": {"model_id": "claude-3-5-sonnet-20240620"}
         },
         {
             "name": "creative_director",
@@ -313,14 +313,14 @@ def swarm(
                 "system_prompt": "You are a renewable energy specialist. Focus on feasibility and impact.",
                 "tools": ["retrieve", "calculator"],
                 "model_provider": "bedrock",
-                "model_settings": {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
+                "model_settings": {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"}
             },
             {
                 "name": "engineer",
                 "system_prompt": "You are an engineering specialist. Focus on implementation and costs.",
                 "tools": ["calculator", "file_write"],
                 "model_provider": "anthropic",
-                "model_settings": {"model_id": "claude-sonnet-4-20250514"}
+                "model_settings": {"model_id": "claude-3-5-sonnet-20240620"}
             },
             {
                 "name": "community_expert",

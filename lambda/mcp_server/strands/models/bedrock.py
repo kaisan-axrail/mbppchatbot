@@ -31,8 +31,8 @@ from .model import Model
 logger = logging.getLogger(__name__)
 
 # See: `BedrockModel._get_default_model_with_warning` for why we need both
-DEFAULT_BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-4-20250514-v1:0"
-_DEFAULT_BEDROCK_MODEL_ID = "{}.anthropic.claude-sonnet-4-20250514-v1:0"
+DEFAULT_BEDROCK_MODEL_ID = "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+_DEFAULT_BEDROCK_MODEL_ID = "{}.anthropic.claude-3-5-sonnet-20240620-v1:0"
 DEFAULT_BEDROCK_REGION = "us-west-2"
 
 BEDROCK_CONTEXT_WINDOW_OVERFLOW_MESSAGES = [
@@ -81,7 +81,7 @@ class BedrockModel(Model):
             guardrail_redact_output: Flag to redact output if guardrail is triggered. Defaults to False.
             guardrail_redact_output_message: If a Bedrock Output guardrail triggers, replace output with this message.
             max_tokens: Maximum number of tokens to generate in the response
-            model_id: The Bedrock model ID (e.g., "us.anthropic.claude-sonnet-4-20250514-v1:0")
+            model_id: The Bedrock model ID (e.g., "us.anthropic.claude-3-5-sonnet-20240620-v1:0")
             include_tool_result_status: Flag to include status field in tool results.
                 True includes status, False removes status, "auto" determines based on model_id. Defaults to "auto".
             stop_sequences: List of sequences that will stop generation when encountered

@@ -75,7 +75,7 @@ class StrandClient:
         self.cross_region_profile = os.environ.get('BEDROCK_CROSS_REGION_PROFILE', 'apac.amazon.nova-pro-v1:0')
         
         # Fallback model configuration
-        self.model_id = os.environ.get('BEDROCK_CLAUDE_MODEL', 'anthropic.claude-sonnet-4-20250514-v1:0')
+        self.model_id = os.environ.get('BEDROCK_CLAUDE_MODEL', 'anthropic.claude-3-5-sonnet-20240620-v1:0')
         self.max_tokens = int(os.environ.get('BEDROCK_MAX_TOKENS', '4096'))
         self.temperature = float(os.environ.get('BEDROCK_TEMPERATURE', '0.7'))
         

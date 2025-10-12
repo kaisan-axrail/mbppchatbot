@@ -60,7 +60,7 @@ result = agent.tool.workflow(
             "description": "Collect and organize research data on renewable energy trends",
             "tools": ["retrieve", "file_write"],
             "model_provider": "bedrock",
-            "model_settings": {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"},
+            "model_settings": {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"},
             "priority": 5,
             "timeout": 300
         },
@@ -70,7 +70,7 @@ result = agent.tool.workflow(
             "dependencies": ["data_collection"],
             "tools": ["calculator", "file_read", "file_write"],
             "model_provider": "anthropic",
-            "model_settings": {"model_id": "claude-sonnet-4-20250514", "params": {"temperature": 0.3}},
+            "model_settings": {"model_id": "claude-3-5-sonnet-20240620", "params": {"temperature": 0.3}},
             "system_prompt": "You are a data analysis specialist focused on renewable energy research.",
             "priority": 4
         },
@@ -1001,7 +1001,7 @@ def workflow(
         "tools": ["calculator", "file_read", "file_write"],
         "model_provider": "bedrock",
         "model_settings": {
-            "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+            "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
             "params": {"temperature": 0.3, "max_tokens": 4000}
         },
         "system_prompt": "You are a data analysis specialist focused on renewable energy research.",
@@ -1042,7 +1042,7 @@ def workflow(
                 "dependencies": ["collect_data"],
                 "tools": ["file_read", "file_write", "python_repl"],
                 "model_provider": "anthropic",
-                "model_settings": {"model_id": "claude-sonnet-4-20250514"},
+                "model_settings": {"model_id": "claude-3-5-sonnet-20240620"},
                 "system_prompt": "You are a data preprocessing specialist.",
                 "priority": 4
             },
@@ -1053,7 +1053,7 @@ def workflow(
                 "tools": ["calculator", "python_repl", "file_write"],
                 "model_provider": "bedrock",
                 "model_settings": {
-                    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+                    "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0",
                     "params": {"temperature": 0.2}
                 },
                 "priority": 5,

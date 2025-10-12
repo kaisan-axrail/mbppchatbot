@@ -26,7 +26,7 @@ result = agent.tool.use_agent(
     system_prompt="You are a helpful math assistant.",
     model_provider="bedrock",  # Switch to Bedrock instead of parent's model
     model_settings={
-      "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+      "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
     },
     tools=["calculator"]
 )
@@ -121,7 +121,7 @@ def use_agent(
             Examples: "bedrock", anthropic", "litellm", "env"
         model_settings: Optional custom configuration for the model.
             If not provided, uses default configuration for the provider.
-            Example: {"model_id": "claude-sonnet-4-20250514", "params": {"temperature": 1}}
+            Example: {"model_id": "claude-3-5-sonnet-20240620", "params": {"temperature": 1}}
         agent: The parent agent (automatically passed by Strands framework).
 
     Returns:
@@ -143,7 +143,7 @@ def use_agent(
     When model_provider="env", these variables are used:
     - STRANDS_PROVIDER: Model provider name
     - STRANDS_MODEL_ID: Specific model identifier, example;
-        "us.anthropic.claude-sonnet-4-20250514-v1:0" for bedrock provider
+        "us.anthropic.claude-3-5-sonnet-20240620-v1:0" for bedrock provider
     - STRANDS_MAX_TOKENS: Maximum tokens to generate
     - STRANDS_TEMPERATURE: Sampling temperature
     - Provider-specific keys (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)

@@ -23,7 +23,7 @@ result = agent.tool.graph(
                 "role": "researcher",
                 "system_prompt": "You research topics thoroughly.",
                 "model_provider": "bedrock",
-                "model_settings": {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
+                "model_settings": {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"}
             },
             {
                 "id": "analyst",
@@ -458,7 +458,7 @@ def graph(
             Options: "bedrock", "anthropic", "litellm", "ollama", "openai", etc.
         model_settings: Default model configuration for all agents.
             Individual nodes can override this with their own model_settings.
-            Example: {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
+            Example: {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"}
         tools: Default list of tool names for all agents.
             Individual nodes can override this with their own tools list.
         agent: The parent agent (automatically passed by Strands framework).
@@ -483,7 +483,7 @@ def graph(
                     "role": "researcher",
                     "system_prompt": "You research topics thoroughly.",
                     "model_provider": "bedrock",
-                    "model_settings": {"model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
+                    "model_settings": {"model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"}
                 },
                 {
                     "id": "analyst",
