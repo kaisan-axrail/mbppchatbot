@@ -317,6 +317,10 @@ Instructions:
             
             response_text = extract_text_from_strand_response(response)
             
+            # Strip source citations from response text
+            import re
+            response_text = re.sub(r'\n*(Sources?|Sumber):\s*Document[^\n]*', '', response_text, flags=re.IGNORECASE).strip()
+            
             # Extract source citations
             sources = [doc.get('source', doc.get('id', 'Unknown')) for doc in context_documents]
             
