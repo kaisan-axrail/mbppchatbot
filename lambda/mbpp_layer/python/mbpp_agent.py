@@ -66,6 +66,8 @@ class MBPPAgent:
             4. If results found: Answer based on the retrieved information
             5. If no results found: Say "I don't have information about that in the MBPP knowledge base."
             
+            IMPORTANT: DO NOT include source citations, references, or document numbers in your response. Just provide the answer directly.
+            
             NEVER answer without calling retrieve first.
             The knowledge base contains MBPP services, events, programs, policies, and procedures.""",
             tools=[retrieve],
