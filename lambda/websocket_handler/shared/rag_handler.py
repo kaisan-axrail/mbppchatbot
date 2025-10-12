@@ -478,14 +478,14 @@ Remember: Base your answer on the provided documents, and be honest about any li
         document_chunks: List[DocumentChunk]
     ) -> Tuple[str, List[str]]:
         """
-        Add enhanced source citations with relevance scores to the response.
+        Extract source list without adding citations to response.
         
         Args:
             response_content: Generated response content
             document_chunks: Document chunks used for generation
             
         Returns:
-            Tuple of (response_with_citations, source_list)
+            Tuple of (response_content, source_list)
         """
         if not document_chunks:
             return response_content, []
@@ -499,18 +499,10 @@ Remember: Base your answer on the provided documents, and be honest about any li
         # Sort sources by relevance score (highest first)
         sorted_sources = sorted(source_scores.items(), key=lambda x: x[1], reverse=True)
         
-        # Format citations with relevance information
-        citations_parts = []
-        for source, score in sorted_sources:
-            citations_parts.append(f"• {source} (relevance: {score:.2f})")
-        
-        citations_text = "\n\n**Sources:**\n" + "\n".join(citations_parts)
-        response_with_citations = response_content + citations_text
-        
-        # Return just the source names for the sources list
+        # Return just the source names for the sources list (no citations appended to response)
         sources = [source for source, _ in sorted_sources]
         
-        return response_with_citations, sources
+        return response_content, sources
     
     async def process_rag_query(
         self,

@@ -50,12 +50,41 @@ class MBPPWorkflowManager:
                 else:
                     print(f"[CLASSIFY] Image too large, skipping vision analysis")
             
+            # Subcategory mapping for validation
+            subcategories_map = {
+                'ALAM SEKITAR': ['KERJA TANAH'],
+                'BANGUNAN': ['TUKARGUNA BANGUNAN/PREMIS', 'HOME STAY', 'PINDAAN/TAMBAHAN', 'MASALAH PROJEK PEMAJUAN', 'BENGKEL/SETOR TANPA IZIN', 'BANGUNAN/PREMIS TANPA IZIN', 'BANGUNAN USANG/TERBIAR/RUNTUH', 'BANGUNAN IBADAT TANPA IZIN', 'MENARA TELEKOMUNIKASI', 'TEMBOK PENGHADANG', 'GERAI TANPA IZIN', 'PERAKUAN KELAYAKAN MENDUDUKI/OC', 'PERMOHONAN MERANCANG SISTEM 3.0 PLUS'],
+                'BENCANA ALAM': ['BANJIR', 'TANAH RUNTUH', 'POKOK TUMBANG'],
+                'BINATANG': ['ANJING LIAR / TIDAK BERLESEN', 'BURUNG MERPATI/GAGAK', 'NYAMUK', 'KUCING LIAR', 'KACAU GANGGU SERANGGA', 'LEMBU/KAMBING/KERBAU/KUDA/UNTA', 'TIKUS', 'KACAU GANGGU LAIN-LAIN BINATANG', 'BURUNG WALIT'],
+                'CUKAI PINTU': ['BIL CUKAI TAKSIRAN', 'BIL CUKAI TERTUNGGAK', 'BIL CUKAI BANTAHAN', 'BIL CUKAI TIDAK DITERIMA', 'TUKAR NAMA PEMILIK', 'BIL CUKAI PEMBETULAN MAKLUMAT', 'MASALAH CUKAI TAKSIRAN', 'TUKAR ALAMAT', 'TUKAR NAMA'],
+                'DISIPLIN': ['MASALAH KAKITANGAN MAJLIS'],
+                'GANGGUAN': ['KACAUGANGGU BISING', 'KACAUGANGGU KESIHATAN AWAM'],
+                'HALANGAN': ['PERLETAKAN KENDERAAN TEPI JALAN', 'KENDERAAN LAMA', 'HALANGAN DI TEPI JALAN', 'HALANGAN DALAM PETAK LETAK KERETA', 'MELETAK KERETA DILUAR PETAK', 'KENDERAAN BERAT (BAS/LORI)', 'KAKI LIMA', 'KERUSI MEJA', 'PROSES TUNDA', 'PROSES KAPIT'],
+                'JALAN': ['JALAN ROSAK/BERLUBANG', 'BAHU JALAN ROSAK/BERLUBANG', 'MASALAH LALULINTAS', 'LUBANG / MANHOLE ROSAK/HILANG', 'PAPAN TANDA TRAFIK ROSAK/HILANG', 'KOREKAN JALAN', 'PAPAN TANDA NAMA JALAN ROSAK/HILANG', 'GEGILI JALAN ROSAK/PECAH', 'BAHU JALAN RUMPUT PANJANG', 'BONGGOL JALAN'],
+                'KEBERSIHAN': ['SAMPAH DOMESTIK TAK KUTIP', 'PARIT TERSUMBAT', 'KEKOTORAN JALAN', 'SAMPAH KEBUN TAK KUTIP', 'LONGGOKAN SAMPAH TANPA IZIN', 'KUTIPAN SAMPAH TIDAK MENGIKUT JADUAL', 'SAMPAH PUKAL TAK KUTIP', 'PEMOTONGAN RUMPUT TEPI JALAN', 'RUMAH KOSONG SEMAK SAMUN', 'TANAH KOSONG SEMAK SAMUN', 'LONGGOKAN SISA BINAAN', 'TIADA TONG SAMPAH', 'KEKOTORAN PREMIS MAKANAN', 'PENEMPATAN TONG SAMPAH TIDAK SESUAI', 'MASALAH KOMPLEK/PASAR/TPS', 'TANDAS AWAM KOTOR', 'KERACUNAN MAKANAN', 'SCHOOL', 'KAMPUNG', 'PENGKALAN'],
+                'KEMUDAHAN AWAM': ['LAMPU JALAN TIDAK MENYALA', 'PARIT ROSAK/RUNTUH', 'LAMPU ISYARAT ROSAK', 'PADANG PERMAINAN ADA SAMPAH', 'PADANG PERMAINAN RUMPUT PANJANG', 'PERALATAN PERMAINAN ROSAK', 'PERHENTIAN BAS ROSAK', 'PERMOHONAN PENGHADANG JALAN', 'TIMER LAMPU JALAN ROSAK', 'PERMOHONAN CERMIN FISH EYE', 'PERALATAN TANDAS AWAM ROSAK', 'CCTV', 'MEROSAKAN HARTA AWAM', 'SALAHGUNA KAWASAN LAPANG', 'PERKHIDMATAN BAS SHUTTLE', 'PENYELENGGARAAN FREE TRADE ZONE', 'KEROSAKAN LAMPU TAMAN MBPP', 'PENUTUP PARIT ROSAK', 'PENUTUP PARIT HILANG'],
+                'LETAK KERETA': ['KOMPAUN', 'BAYARAN KOMPAUN', 'PSP', 'KEKURANGAN PETAK LETAK KERETA', 'PETAK LETAK KERETA KURANG JELAS', 'KOMPAUN TRAFIK'],
+                'PENYELENGGARAAN HARTA': ['MASALAH COB', 'GERAI MAJLIS', 'BANGUNAN MAJLIS', 'PERUMAHAN AWAM', 'KEGUNAAN TANAH MAJLIS', 'PENCEROBOHAN TANAH MAJLIS'],
+                'PERNIAGAAN': ['TIDAK MEMATUHI SYARAT PERLESENAN', 'KACAU GANGGU PENJAJA', 'PERNIAGAAN TANPA LESEN', 'PENJAJA TANPA LESEN', 'PENGIKLANAN TANPA LESEN'],
+                'POKOK': ['PEMANGKASAN POKOK', 'PENEBANGAN POKOK', 'PENYELENGGARAAN LANDSKAP'],
+                'PORTAL E-PERJAWATAN': ['PERTANYAAN/ ADUAN JAWATAN KOSONG'],
+                'PUSAT HIBURAN': ['BEROPERASI LEBIH MASA', 'GEJALA SOSIAL', 'PUSAT HIBURAN TIDAK BERLESEN', 'CYBERCAFE']
+            }
+            
             prompt = f"""Analyze this incident and classify it into:
 1. Feedback type: Aduan, Cadangan, Penghargaan, or Pertanyaan
 2. Category: ALAM SEKITAR, BANGUNAN, BENCANA ALAM, BINATANG, CUKAI PINTU, DISPLIN, GANGGUAN, HALANGAN, JALAN, KEBERSIHAN, KEMUDAHAN AWAM, LETAK KERETA, PENYELENGGARAAN HARTA, PERNIAGAAN, POKOK, PORTAL E-PERJAWATAN, or PUSAT HIBURAN
-3. Subcategory based on the category
+3. Subcategory: Choose ONLY from the valid subcategories for the selected category
+
+Valid subcategories by category:
+- ALAM SEKITAR: KERJA TANAH
+- BENCANA ALAM: BANJIR, TANAH RUNTUH, POKOK TUMBANG
+- POKOK: PEMANGKASAN POKOK, PENEBANGAN POKOK, PENYELENGGARAAN LANDSKAP
+- HALANGAN: PERLETAKAN KENDERAAN TEPI JALAN, KENDERAAN LAMA, HALANGAN DI TEPI JALAN, etc.
 
 Description: "{description}"
+
+IMPORTANT: Only use subcategories that exist for the chosen category. Do not invent new subcategories.
 
 Respond in JSON format only:
 {{"feedback": "...", "category": "...", "sub_category": "..."}}"""
@@ -80,10 +109,20 @@ Respond in JSON format only:
             json_match = re.search(r'\{[^}]+\}', text)
             if json_match:
                 classification = json.loads(json_match.group())
+                category = classification.get("category", "JALAN")
+                sub_category = classification.get("sub_category", "--")
+                
+                # Validate subcategory against allowed list
+                if category in subcategories_map:
+                    valid_subs = [s.upper() for s in subcategories_map[category]]
+                    if sub_category.upper() not in valid_subs:
+                        print(f"[CLASSIFY] Invalid subcategory '{sub_category}' for category '{category}', using first valid: {subcategories_map[category][0]}")
+                        sub_category = subcategories_map[category][0]
+                
                 result = {
                     "feedback": classification.get("feedback", "Aduan"),
-                    "category": classification.get("category", "JALAN"),
-                    "sub_category": classification.get("sub_category", "--")
+                    "category": category,
+                    "sub_category": sub_category
                 }
                 print(f"[CLASSIFY] Success: {result}")
                 return result
