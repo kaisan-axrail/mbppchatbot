@@ -638,11 +638,24 @@ If location is not mentioned, use empty string for location."""
         # Let the agent call retrieve tool itself
         response = self.rag_agent(message)
         
+        # Strip source citations from response
+        response = self._strip_source_citations(response)
+        
         return {
             "type": "rag",
             "response": response,
             "session_id": session_id
         }
+    
+    def _strip_source_citations(self, text: str) -> str:
+        """Remove source citations from response text"""
+        import re
+        # Remove patterns like "Sources: Document 1, Document 2"
+        text = re.sub(r'\n*Sources?:\s*Document[^\n]*', '', text, flags=re.IGNORECASE)
+        # Remove patterns like "(Document 1)" or "[Document 1]"
+        text = re.sub(r'[\(\[]Document\s+\d+[\)\]]', '', text)
+        # Remove trailing whitespace
+        return text.strip()
     
 
     
