@@ -636,7 +636,15 @@ If location is not mentioned, use empty string for location."""
         os.environ['MIN_SCORE'] = '0.6'
         
         # Let the agent call retrieve tool itself
-        response = self.rag_agent(message)
+        agent_result = self.rag_agent(message)
+        
+        # Extract text from AgentResult object
+        if hasattr(agent_result, 'data'):
+            response = agent_result.data
+        elif hasattr(agent_result, 'content'):
+            response = agent_result.content
+        else:
+            response = str(agent_result)
         
         # Strip source citations from response
         response = self._strip_source_citations(response)
