@@ -298,52 +298,46 @@ Respond with ONLY the location or empty string, nothing else."""
                     "session_id": session_id
                 }
             
-            # Location was provided, move to step 3 and ask hazard question
-            workflow_context['current_step'] = 3
-            
-            # Classify first
+            # Location was provided, classify first
             from strands_tools.mbpp_workflows import MBPPWorkflowManager
             manager = MBPPWorkflowManager()
             classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
             
-            # Generate contextual hazard question
-            try:
-                prompt_content = f"""Based on:
-Description: "{collected_data['description']}"
-Category: {classification['category']}
-Subcategory: {classification['sub_category']}
-
-Generate a relevant yes/no question about urgency. Keep it under 12 words.
-Examples:
-- JALAN: "Is it blocking the road?"
-- POKOK: "Is the tree blocking access?"
-- BINATANG: "Is it causing immediate danger?"
-- KEBERSIHAN: "Is it causing health hazard?"
-
-Respond with ONLY the question."""
+            # Only ask blocked road question for BENCANA ALAM category
+            if classification['category'] == 'BENCANA ALAM':
+                workflow_context['current_step'] = 3
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "Is it blocking the road?",
+                    "session_id": session_id,
+                    "quick_replies": ["Yes", "No"]
+                }
+            else:
+                # Skip hazard question, go directly to confirmation
+                workflow_context['current_step'] = 4
+                collected_data['hazard_confirmation'] = False
                 
-                response = self.bedrock_runtime.invoke_model(
-                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                    body=json.dumps({
-                        "anthropic_version": "bedrock-2023-05-31",
-                        "max_tokens": 50,
-                        "messages": [{"role": "user", "content": prompt_content}]
-                    })
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** Incident Report\n\n"
+                    f"**Details:** {collected_data['description']}\n\n"
+                    f"**Feedback:** {classification['feedback']}\n\n"
+                    f"**Category:** {classification['category']}\n\n"
+                    f"**Sub-category:** {classification['sub_category']}\n\n"
+                    f"**Location:** {collected_data['location']}"
                 )
-                result = json.loads(response['body'].read())
-                hazard_q = result['content'][0]['text'].strip()
-            except Exception as e:
-                print(f"AI hazard question error: {e}")
-                hazard_q = "Is it blocking the main road?"
-            
-            return {
-                "type": "workflow",
-                "workflow_type": workflow_type,
-                "workflow_id": workflow_id,
-                "response": hazard_q,
-                "session_id": session_id,
-                "quick_replies": ["Yes", "No"]
-            }
+                
+                collected_data['preview_classification'] = classification
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": preview,
+                    "session_id": session_id,
+                    "quick_replies": ["Yes", "No"]
+                }
         # Step 2: Waiting for location after description was provided
         elif collected_data.get('waiting_for_location'):
             print(f"[DEBUG] Step 2: User provided location: {message}")
@@ -357,44 +351,41 @@ Respond with ONLY the question."""
             manager = MBPPWorkflowManager()
             classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
             
-            # Generate contextual hazard question
-            try:
-                prompt_content = f"""Based on:
-Description: "{collected_data['description']}"
-Category: {classification['category']}
-Subcategory: {classification['sub_category']}
-
-Generate a relevant yes/no question about urgency. Keep it under 12 words.
-Examples:
-- JALAN: "Is it blocking the road?"
-- POKOK: "Is the tree blocking access?"
-- BINATANG: "Is it causing immediate danger?"
-- KEBERSIHAN: "Is it causing health hazard?"
-
-Respond with ONLY the question."""
+            # Only ask blocked road question for BENCANA ALAM category
+            if classification['category'] == 'BENCANA ALAM':
+                workflow_context['current_step'] = 3
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": "Is it blocking the road?",
+                    "session_id": session_id,
+                    "quick_replies": ["Yes", "No"]
+                }
+            else:
+                # Skip hazard question, go directly to confirmation
+                workflow_context['current_step'] = 4
+                collected_data['hazard_confirmation'] = False
                 
-                response = self.bedrock_runtime.invoke_model(
-                    modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
-                    body=json.dumps({
-                        "anthropic_version": "bedrock-2023-05-31",
-                        "max_tokens": 50,
-                        "messages": [{"role": "user", "content": prompt_content}]
-                    })
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** Incident Report\n\n"
+                    f"**Details:** {collected_data['description']}\n\n"
+                    f"**Feedback:** {classification['feedback']}\n\n"
+                    f"**Category:** {classification['category']}\n\n"
+                    f"**Sub-category:** {classification['sub_category']}\n\n"
+                    f"**Location:** {collected_data['location']}"
                 )
-                result = json.loads(response['body'].read())
-                hazard_q = result['content'][0]['text'].strip()
-            except Exception as e:
-                print(f"AI hazard question error: {e}")
-                hazard_q = "Is it blocking the main road?"
-            
-            return {
-                "type": "workflow",
-                "workflow_type": workflow_type,
-                "workflow_id": workflow_id,
-                "response": hazard_q,
-                "session_id": session_id,
-                "quick_replies": ["Yes", "No"]
-            }
+                
+                collected_data['preview_classification'] = classification
+                return {
+                    "type": "workflow",
+                    "workflow_type": workflow_type,
+                    "workflow_id": workflow_id,
+                    "response": preview,
+                    "session_id": session_id,
+                    "quick_replies": ["Yes", "No"]
+                }
         # Step 3: Answer hazard question
         elif current_step == 3 and 'hazard_confirmation' not in collected_data:
             collected_data['hazard_confirmation'] = 'yes' in message.lower()
@@ -405,16 +396,28 @@ Respond with ONLY the question."""
             manager = MBPPWorkflowManager()
             classification = manager.classify_incident(collected_data['description'], collected_data.get('image_data'))
             
-            preview = (
-                "Please confirm these details:\n\n"
-                f"**Subject:** Incident Report\n\n"
-                f"**Details:** {collected_data['description']}\n\n"
-                f"**Feedback:** {classification['feedback']}\n\n"
-                f"**Category:** {classification['category']}\n\n"
-                f"**Sub-category:** {classification['sub_category']}\n\n"
-                f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
-                f"**Location:** {collected_data['location']}"
-            )
+            # Only show blocked road field for BENCANA ALAM
+            if classification['category'] == 'BENCANA ALAM':
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** Incident Report\n\n"
+                    f"**Details:** {collected_data['description']}\n\n"
+                    f"**Feedback:** {classification['feedback']}\n\n"
+                    f"**Category:** {classification['category']}\n\n"
+                    f"**Sub-category:** {classification['sub_category']}\n\n"
+                    f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                    f"**Location:** {collected_data['location']}"
+                )
+            else:
+                preview = (
+                    "Please confirm these details:\n\n"
+                    f"**Subject:** Incident Report\n\n"
+                    f"**Details:** {collected_data['description']}\n\n"
+                    f"**Feedback:** {classification['feedback']}\n\n"
+                    f"**Category:** {classification['category']}\n\n"
+                    f"**Sub-category:** {classification['sub_category']}\n\n"
+                    f"**Location:** {collected_data['location']}"
+                )
             
             collected_data['preview_classification'] = classification
             return {
@@ -461,17 +464,28 @@ Respond with ONLY the question."""
                 collected_data['preview_classification'] = classification
                 collected_data.pop('editing_field', None)
                 
-                # Show updated preview
-                preview = (
-                    "Please confirm these details:\n\n"
-                    f"**Subject:** Incident Report\n\n"
-                    f"**Details:** {collected_data['description']}\n\n"
-                    f"**Feedback:** {classification['feedback']}\n\n"
-                    f"**Category:** {classification['category']}\n\n"
-                    f"**Sub-category:** {classification['sub_category']}\n\n"
-                    f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
-                    f"**Location:** {collected_data['location']}"
-                )
+                # Show updated preview - only show blocked road for BENCANA ALAM
+                if classification['category'] == 'BENCANA ALAM':
+                    preview = (
+                        "Please confirm these details:\n\n"
+                        f"**Subject:** Incident Report\n\n"
+                        f"**Details:** {collected_data['description']}\n\n"
+                        f"**Feedback:** {classification['feedback']}\n\n"
+                        f"**Category:** {classification['category']}\n\n"
+                        f"**Sub-category:** {classification['sub_category']}\n\n"
+                        f"**Blocked road:** {'Yes' if collected_data.get('hazard_confirmation') else 'No'}\n\n"
+                        f"**Location:** {collected_data['location']}"
+                    )
+                else:
+                    preview = (
+                        "Please confirm these details:\n\n"
+                        f"**Subject:** Incident Report\n\n"
+                        f"**Details:** {collected_data['description']}\n\n"
+                        f"**Feedback:** {classification['feedback']}\n\n"
+                        f"**Category:** {classification['category']}\n\n"
+                        f"**Sub-category:** {classification['sub_category']}\n\n"
+                        f"**Location:** {collected_data['location']}"
+                    )
                 
                 return {
                     "type": "workflow",
